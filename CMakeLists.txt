@@ -15,7 +15,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(spdlog)
 
-# help
+# opengl/glfw
 find_package(OpenGL REQUIRED)
 
 include_directories(${OPENGL_INCLUDE_DIRS})
@@ -33,11 +33,14 @@ endif()
 
 add_executable(sylk
         libs/glad/glad.c
+        libs/img/stb_image.cpp
 
         src/main.cpp
         src/window/window.cpp
         src/shader/shader.cpp
-        src/shader/program.cpp)
+        src/shader/program.cpp
+
+        )
 
 target_include_directories(sylk PRIVATE
         "src/"
