@@ -23,6 +23,24 @@ include_directories(${OPENGL_INCLUDE_DIRS})
 set( GLFW_BUILD_DOCS OFF CACHE BOOL  "GLFW lib only" )
 set( GLFW_INSTALL OFF CACHE BOOL  "GLFW lib only" )
 
+# vulkan
+find_package(Vulkan REQUIRED)
+include_directories(${Vulkan_INCLUDE_DIRS})
+
+if(Vulkan_FOUND)
+    message(STATUS "- Found Vulkan ${Vulkan_VERSION}")
+    message(STATUS "- Imported includes from ${Vulkan_INCLUDE_DIR}")
+    message(STATUS "- Linking Vulkan library from ${Vulkan_LIBRARY}")
+else()
+    message(WARNING "Could not find Vulkan.")
+endif()
+
+if(Vulkan_glslc_FOUND)
+    message(STATUS "- Found GLSL SPIR-V compiler in ${Vulkan_GLSLC_EXECUTABLE}")
+else()
+    message(WARNING "Could not find GLSL SPIR-V compiler")
+endif()
+
 
 # sylk
 if(${CMAKE_BUILD_TYPE} STREQUAL Debug)
@@ -37,10 +55,11 @@ add_executable(sylk
 
         src/main.cpp
         src/window/window.cpp
-        src/shader/shader.cpp
-        src/shader/program.cpp
 
-        )
+
+
+
+)
 
 target_include_directories(sylk PRIVATE
         "src/"
@@ -50,5 +69,6 @@ target_include_directories(sylk PRIVATE
 target_link_libraries(sylk PRIVATE
         spdlog::spdlog
         ${OPENGL_LIBRARIES}
+        Vulkan::Vulkan
         glfw
         )
