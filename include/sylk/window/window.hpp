@@ -4,15 +4,15 @@
 
 #pragma once
 
-#include <vulkan/vulkan.hpp>
-
 #include <sylk/coreutils/rust_style_types.hpp>
-#include <sylk/data/color.hpp>
+#include <sylk/vkutils/validation_layers.hpp>
 
 #include <vector>
 #include <span>
 
-class GLFWwindow;
+#include <vulkan/vulkan.hpp>
+
+struct GLFWwindow;
 
 namespace sylk {
 
@@ -24,11 +24,11 @@ namespace sylk {
             i32 width = 1280;
             i32 height = 720;
             bool fullscreen = false;
-        };
+        } settings_;
+
+        ValidationLayers validation_layers_;
 
         GLFWwindow* window_;
-        Settings settings_;
-
 
         std::vector<const char*> vk_required_extensions_;
         std::vector<const char*> vk_available_extensions_;
@@ -51,6 +51,6 @@ namespace sylk {
         [[nodiscard]] bool is_open() const;
 
     private:
-        bool verify_req_exts_available() const; // NOLINT(modernize-use-nodiscard)
+        bool check_vk_required_extensions_available(); // NOLINT(modernize-use-nodiscard)
     };
 }

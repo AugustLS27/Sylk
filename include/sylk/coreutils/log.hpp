@@ -35,10 +35,12 @@ namespace sylk {
 #endif
 
 #ifndef SYLK_LOG_LEVEL
-#   if defined(SYLK_DEBUG)
+#   if defined(SYLK_VERBOSE)
 #       define SYLK_LOG_LEVEL ELogLevel::TRACE
-#   elif defined(SYLK_RELEASE)
+#   elif defined(SYLK_DEBUG)
 #       define SYLK_LOG_LEVEL ELogLevel::DEBUG
+#   elif defined(SYLK_RELEASE)
+#       define SYLK_LOG_LEVEL ELogLevel::INFO
 #   else
 #       define SYLK_LOG_LEVEL ELogLevel::OFF
 #   endif

@@ -45,6 +45,9 @@ endif()
 # sylk
 if(${CMAKE_BUILD_TYPE} STREQUAL Debug)
     add_compile_definitions(SYLK_DEBUG)
+elseif(${CMAKE_BUILD_TYPE} STREQUAL Verbose)
+    add_compile_definitions(SYLK_VERBOSE)
+    add_compile_definitions(SYLK_DEBUG)
 else()
     add_compile_definitions(SYLK_RELEASE)
 endif()
@@ -55,7 +58,8 @@ add_executable(sylk
 
         src/main.cpp
         src/window/window.cpp
-        src/vkutils/validation.cpp
+        src/vkutils/result_handler.cpp
+        src/vkutils/validation_layers.cpp
         )
 
 target_include_directories(sylk PRIVATE
