@@ -6,4 +6,4 @@
 
 #define SYLK_EXPOSE_LOG_CONSTANTS
 #include "log.hpp"
-#include "typedefs.hpp"
+#include "rust_style_types.hpp"

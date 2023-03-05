@@ -36,9 +36,9 @@ namespace sylk {
 
 #ifndef SYLK_LOG_LEVEL
 #   if defined(SYLK_DEBUG)
-#       define SYLK_LOG_LEVEL LogLevel::TRACE
+#       define SYLK_LOG_LEVEL ELogLevel::TRACE
 #   elif defined(SYLK_RELEASE)
-#       define SYLK_LOG_LEVEL log_constants::DEBUG
+#       define SYLK_LOG_LEVEL ELogLevel::DEBUG
 #   else
 #       define SYLK_LOG_LEVEL ELogLevel::OFF
 #   endif

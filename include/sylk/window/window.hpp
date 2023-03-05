@@ -6,7 +6,7 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include <sylk/coreutils/typedefs.hpp>
+#include <sylk/coreutils/rust_style_types.hpp>
 #include <sylk/data/color.hpp>
 
 #include <vector>
@@ -30,7 +30,8 @@ namespace sylk {
         Settings settings_;
 
 
-        std::vector<const char*> required_extensions_;
+        std::vector<const char*> vk_required_extensions_;
+        std::vector<const char*> vk_available_extensions_;
 
         vk::Instance vk_instance_;
         vk::Device vk_device_;
@@ -48,5 +49,8 @@ namespace sylk {
         std::span<const char*> fetch_vk_required_extensions(bool force_update = false);
 
         [[nodiscard]] bool is_open() const;
+
+    private:
+        bool verify_req_exts_available() const; // NOLINT(modernize-use-nodiscard)
     };
 }

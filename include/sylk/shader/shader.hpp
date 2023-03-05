@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <sylk/coreutils/typedefs.hpp>
+#include <sylk/coreutils/rust_style_types.hpp>
 
 namespace sylk {
 

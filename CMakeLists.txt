@@ -55,11 +55,8 @@ add_executable(sylk
 
         src/main.cpp
         src/window/window.cpp
-
-
-
-
-)
+        src/vkutils/validation.cpp
+        )
 
 target_include_directories(sylk PRIVATE
         "src/"
