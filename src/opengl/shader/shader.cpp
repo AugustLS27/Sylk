@@ -2,10 +2,10 @@
 // Created by August on 25-2-23.
 //
 
-#include <glad/glad.h>
+#include "glad/glad.h"
 
-#include <sylk/shader/shader.hpp>
-#include <sylk/coreutils/all.hpp>
+#include "sylk/shader/shader.hpp"
+#include "sylk/coreutils/all.hpp"
 
 #include <fstream>
 #include <sstream>

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <sylk/coreutils/rust_style_types.hpp>
+#include <sylk/core/utils/rust_style_types.hpp>
 
 #include <array>
 #include <vector>

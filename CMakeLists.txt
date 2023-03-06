@@ -57,9 +57,9 @@ add_executable(sylk
         libs/img/stb_image.cpp
 
         src/main.cpp
-        src/window/window.cpp
-        src/vkutils/result_handler.cpp
-        src/vkutils/validation_layers.cpp
+        src/vulkan/window/vulkan_window.cpp
+        src/vulkan/utils/result_handler.cpp
+        src/vulkan/utils/validation_layers.cpp
         )
 
 target_include_directories(sylk PRIVATE

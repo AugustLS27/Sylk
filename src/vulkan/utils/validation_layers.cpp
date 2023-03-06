@@ -5,9 +5,9 @@
 #include <vulkan/vulkan.hpp>
 #include <magic_enum/magic_enum.hpp>
 
-#include <sylk/vkutils/validation_layers.hpp>
+#include <sylk/vulkan/utils/validation_layers.hpp>
 #define SYLK_EXPOSE_LOG_CONSTANTS
-#include <sylk/coreutils/log.hpp>
+#include <sylk/core/utils/log.hpp>
 
 namespace sylk {
     ValidationLayers::ValidationLayers(vk::Instance& instance)
@@ -51,10 +51,15 @@ namespace sylk {
             return;
         }
 
+        log(DEBUG, "Querying available validation layers...");
         const auto available_layers = vk::enumerateInstanceLayerProperties();
 
-        log(DEBUG, "Querying available validation layers...");
+        if (available_layers.empty()) {
+            log(WARN, "No validation layers were detected");
+            return;
+        }
 
+        log(TRACE, "Layers found:");
         for (const auto& layer : available_layers) {
             available_layers_.emplace_back(layer.layerName);
             log(TRACE, "  -- {}", available_layers_.back());

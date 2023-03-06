@@ -2,7 +2,7 @@
 // Created by August Silva on 4-3-23.
 //
 
-#include <sylk/window/window.hpp>
+#include <sylk/vulkan/window/vulkan_window.hpp>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -12,7 +12,7 @@
 #include <iostream>
 
 int main() {
-    sylk::Window window;
+    sylk::VulkanWindow window;
 
     while (window.is_open()) {
         window.poll_events();
