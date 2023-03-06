@@ -4,7 +4,6 @@
 
 #include <vulkan/vulkan.hpp>
 #include <GLFW/glfw3.h>
-#include <magic_enum/magic_enum.hpp>
 
 #include <sylk/vulkan/window/vulkan_window.hpp>
 #include <sylk/core/utils/all.hpp>
@@ -14,10 +13,10 @@
 namespace sylk {
 
     VulkanWindow::VulkanWindow(const Settings settings)
-        : validation_layers_(vk_instance_)
+        : validation_layers_(instance_)
         , window_(nullptr)
         , settings_(settings)
-        , vk_required_extensions_({}) {
+        , required_extensions_({}) {
         if (!glfwInit()) {
             log(CRITICAL, "GLFW initialization failed");
         }
@@ -28,13 +27,14 @@ namespace sylk {
         auto monitor = (settings.fullscreen ? glfwGetPrimaryMonitor() : nullptr);
         window_ = glfwCreateWindow(settings_.width, settings_.height, settings_.title, monitor, nullptr);
 
-        create_vk_instance();
-        select_vk_physical_device();
+        create_instance();
+        select_physical_device();
     }
 
     VulkanWindow::~VulkanWindow() {
         if (window_) {
-            vk_instance_.destroy();
+            instance_.destroy();
+            device_.destroy();
             
             glfwDestroyWindow(window_);
             glfwTerminate();
@@ -52,19 +52,19 @@ namespace sylk {
     void VulkanWindow::render() const {
     }
 
-    std::span<const char*> VulkanWindow::fetch_vk_required_extensions(bool force_update) {
+    std::span<const char*> VulkanWindow::fetch_required_extensions(bool force_update) {
         log(DEBUG, "Querying available Vulkan extensions...");
 
-        if (vk_required_extensions_.empty() || force_update) {
+        if (required_extensions_.empty() || force_update) {
             u32 ext_count;
             const char** instance_ext_list = glfwGetRequiredInstanceExtensions(&ext_count);
-            vk_required_extensions_ = std::vector(instance_ext_list, instance_ext_list + ext_count);
+            required_extensions_ = std::vector(instance_ext_list, instance_ext_list + ext_count);
         }
 
-        return {vk_required_extensions_.data(), vk_required_extensions_.size()};
+        return {required_extensions_.data(), required_extensions_.size()};
     }
 
-    void VulkanWindow::create_vk_instance() {
+    void VulkanWindow::create_instance() {
         if (ValidationLayers::enabled() && !validation_layers_.supports_required_layers()) {
             log(CRITICAL, "Missing validation layers are likely a flaw of an incomplete Vulkan SDK.\n"
                           "Consider installing the LunarG Vulkan SDK, or run Sylk in Release mode to "
@@ -79,46 +79,46 @@ namespace sylk {
                 .setEngineVersion(VK_MAKE_VERSION(0, 1, 0))
                 .setApiVersion(VK_API_VERSION_1_0);
 
-        fetch_vk_required_extensions();
-        check_vk_required_extensions_available();
+        fetch_required_extensions();
+        required_extensions_available();
 
         const vk::InstanceCreateInfo instance_create_info = vk::InstanceCreateInfo()
                 .setPApplicationInfo(&app_info)
-                .setEnabledExtensionCount(vk_required_extensions_.size())
-                .setPEnabledExtensionNames(*vk_required_extensions_.data())
+                .setEnabledExtensionCount(required_extensions_.size())
+                .setPEnabledExtensionNames(*required_extensions_.data())
 #ifdef SYLK_DEBUG
                 .setEnabledLayerCount(ValidationLayers::enabled_layer_count())
                 .setPEnabledLayerNames(*ValidationLayers::enabled_layer_names())
 #else
                 .setEnabledLayerCount(0)
 #endif
-;
+                ;
 
-        handle_vkresult(vk::createInstance(&instance_create_info, nullptr, &vk_instance_),
-                        "Failed to create Vulkan instance", true);
+        handle_result(vk::createInstance(&instance_create_info, nullptr, &instance_),
+                      "Failed to create Vulkan instance", true);
 
         log(INFO, "Created Vulkan instance.");
 
     }
 
-    bool VulkanWindow::check_vk_required_extensions_available() {
+    bool VulkanWindow::required_extensions_available() {
         const std::vector<vk::ExtensionProperties> ext_props = vk::enumerateInstanceExtensionProperties();
 
         log(TRACE, "Available extensions:");
         for (const auto& ext: ext_props) {
-            vk_available_extensions_.emplace_back(ext.extensionName);
-            log(TRACE, "   -- {}", vk_available_extensions_.back());
+            available_extensions_.emplace_back(ext.extensionName);
+            log(TRACE, "   -- {}", available_extensions_.back());
         }
 
         log(TRACE, "Required extensions:");
-        for (const auto& ext: vk_required_extensions_) {
+        for (const auto& ext: required_extensions_) {
             log(TRACE, "   -- {}", ext);
         }
 
         bool all_available = true;
-        for (const auto& req_ext : vk_required_extensions_) {
+        for (const auto& req_ext : required_extensions_) {
             bool ext_found = false;
-            for (const auto& available_ext : vk_available_extensions_) {
+            for (const auto& available_ext : available_extensions_) {
                 if (!std::strcmp(req_ext, available_ext)) {
                     ext_found = true;
                     break;
@@ -138,8 +138,8 @@ namespace sylk {
         return all_available;
     }
 
-    void VulkanWindow::select_vk_physical_device() {
-        const auto physical_devices = vk_instance_.enumeratePhysicalDevices();
+    void VulkanWindow::select_physical_device() {
+        const auto physical_devices = instance_.enumeratePhysicalDevices();
 
         if (physical_devices.empty()) {
             log(CRITICAL, "No graphics cards were located on this device.");
@@ -148,18 +148,18 @@ namespace sylk {
 
         for (const auto& dev : physical_devices) {
             log(TRACE, "Found device: {}", dev.getProperties().deviceName);
-            if (is_device_suitable(dev)) {
-                vk_physical_device_ = dev;
+            if (device_is_suitable(dev)) {
+                physical_device_ = dev;
                 break;
             }
         }
 
         // If no discrete GPU is found, opt for integrated card instead
-        if (vk_physical_device_ == vk::PhysicalDevice()) {
+        if (physical_device_ == vk::PhysicalDevice()) {
             bool found = false;
             for (const auto& dev : physical_devices) {
-                if (is_device_suitable(dev, vk::PhysicalDeviceType::eIntegratedGpu)) {
-                    vk_physical_device_ = dev;
+                if (device_is_suitable(dev, vk::PhysicalDeviceType::eIntegratedGpu)) {
+                    physical_device_ = dev;
                     found = true;
                     break;
                 }
@@ -171,7 +171,7 @@ namespace sylk {
             }
         }
 
-        log(DEBUG, "Selected device: {}", vk_physical_device_.getProperties().deviceName);
+        log(DEBUG, "Selected device: {}", physical_device_.getProperties().deviceName);
     }
 
     VulkanWindow::QueueFamilyIndices VulkanWindow::find_queue_families(const vk::PhysicalDevice& device) const {
@@ -190,11 +190,40 @@ namespace sylk {
         return indices;
     }
 
-    bool VulkanWindow::is_device_suitable(const vk::PhysicalDevice& device,
-                                          const vk::PhysicalDeviceType required_device_type) const {
-        const auto dev_props = device.getProperties();
-        const auto queue_families = find_queue_families(device);
-        return dev_props.deviceType == required_device_type && queue_families.has_all();
+    bool VulkanWindow::device_is_suitable(const vk::PhysicalDevice& device,
+                                          vk::PhysicalDeviceType required_device_type) const {
+        return device.getProperties().deviceType == required_device_type
+                && find_queue_families(device).has_all();
+    }
+
+    void VulkanWindow::create_logical_device() {
+        const auto queue_indices = find_queue_families(physical_device_);
+
+        f32 queue_prio = 1.f;
+        const auto dev_queue_create_info = vk::DeviceQueueCreateInfo()
+                .setQueueFamilyIndex(queue_indices.graphics.value())
+                .setQueueCount(1)
+                .setPQueuePriorities(&queue_prio);
+
+        const auto dev_features = vk::PhysicalDeviceFeatures();
+
+        const auto dev_create_info = vk::DeviceCreateInfo()
+                .setPQueueCreateInfos(&dev_queue_create_info)
+                .setQueueCreateInfoCount(1)
+                .setPEnabledFeatures(&dev_features)
+                .setEnabledExtensionCount(0)
+#ifdef SYLK_DEBUG
+                .setEnabledLayerCount(ValidationLayers::enabled_layer_count())
+                .setPEnabledLayerNames(*ValidationLayers::enabled_layer_names()) // For backward compatibility with older VK implementations
+#else
+                .setEnabledLayerCount(0)
+#endif
+                ;
+
+        device_ = physical_device_.createDevice(dev_create_info);
+
+        device_.getQueue(queue_indices.graphics.value(), 0, &graphics_queue_);
+
     }
 
     // There is a GCC/Clang bug which causes an erroneous compiler error

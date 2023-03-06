@@ -11,7 +11,7 @@
 #include <sylk/core/utils/log.hpp>
 
 namespace sylk {
-    void handle_vkresult(vk::Result result, const char* error_message, bool terminate) {
+    void handle_result(vk::Result result, const char* error_message, bool terminate) {
         if (result != vk::Result::eSuccess) {
             log((terminate ? CRITICAL : ERROR), "{} | {}", error_message, magic_enum::enum_name(result));
         }

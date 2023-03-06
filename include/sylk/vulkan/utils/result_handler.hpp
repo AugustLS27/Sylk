@@ -9,5 +9,5 @@ namespace vk {
 }
 
 namespace sylk {
-    void handle_vkresult(vk::Result result, const char* error_message, bool terminate = false);
+    void handle_result(vk::Result result, const char* error_message, bool terminate = false);
 }

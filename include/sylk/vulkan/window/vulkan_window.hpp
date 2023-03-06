@@ -35,16 +35,18 @@ namespace sylk {
             }
         };
 
+        vk::Queue graphics_queue_;
+
         ValidationLayers validation_layers_;
 
         GLFWwindow* window_;
 
-        std::vector<const char*> vk_required_extensions_;
-        std::vector<const char*> vk_available_extensions_;
+        std::vector<const char*> required_extensions_;
+        std::vector<const char*> available_extensions_;
 
-        vk::Instance vk_instance_;
-        vk::Device vk_device_;
-        vk::PhysicalDevice vk_physical_device_;
+        vk::Instance instance_;
+        vk::Device device_;
+        vk::PhysicalDevice physical_device_;
 
     public:
         explicit VulkanWindow(Settings settings = {});
@@ -56,12 +58,13 @@ namespace sylk {
         [[nodiscard]] bool is_open() const;
 
     private:
-        void create_vk_instance();
-        void select_vk_physical_device();
+        void create_instance();
+        void select_physical_device();
+        void create_logical_device();
 
-        std::span<const char*> fetch_vk_required_extensions(bool force_update = false);
-        bool check_vk_required_extensions_available(); // NOLINT(modernize-use-nodiscard)
-        [[nodiscard]] bool is_device_suitable(const vk::PhysicalDevice& device,
+        std::span<const char*> fetch_required_extensions(bool force_update = false);
+        bool required_extensions_available(); // NOLINT(modernize-use-nodiscard)
+        [[nodiscard]] bool device_is_suitable(const vk::PhysicalDevice& device,
                                               vk::PhysicalDeviceType required_device_type = vk::PhysicalDeviceType::eDiscreteGpu) const;
 
         QueueFamilyIndices find_queue_families(const vk::PhysicalDevice& device) const;

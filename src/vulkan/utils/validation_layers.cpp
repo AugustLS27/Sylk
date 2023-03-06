@@ -14,7 +14,7 @@ namespace sylk {
             : vk_instance_(instance)
     {}
 
-    // i know this is nearly a duplicate of check_vk_required_extensions_available() [window.cpp]
+    // i know this is nearly a duplicate of required_extensions_available() [window.cpp]
     // however i believe these are the only two usages of this type of container strcmp function
     // making this modular may actually not be worth it since this function actually compares an std::array
     // not to mention the class local members that are conditionally filled or not filled.
