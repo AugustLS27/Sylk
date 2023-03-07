@@ -5516,7 +5516,7 @@ static void *stbi__bmp_parse_header(stbi__context *s, stbi__bmp_data *info)
          for (i=0; i < 12; ++i)
             stbi__get32le(s); // discard color space parameters
          if (hsz == 124) {
-            stbi__get32le(s); // discard rendering intent
+            stbi__get32le(s); // discard graphics intent
             stbi__get32le(s); // discard offset of profile data
             stbi__get32le(s); // discard size of profile data
             stbi__get32le(s); // discard reserved

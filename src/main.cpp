@@ -9,10 +9,9 @@
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
 
-#include <iostream>
-
 int main() {
     sylk::VulkanWindow window;
+    window.init();
 
     while (window.is_open()) {
         window.poll_events();

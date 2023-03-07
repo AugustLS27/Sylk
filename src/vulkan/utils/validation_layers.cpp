@@ -70,7 +70,7 @@ namespace sylk {
         return static_cast<u32>(required_layers_.size());
     }
 
-    const char* const* ValidationLayers::enabled_layer_names() {
-        return required_layers_.data();
+    const std::vector<const char*>& ValidationLayers::enabled_layer_names() {
+        return required_layers_;
     }
 }

@@ -60,6 +60,7 @@ add_executable(sylk
         src/vulkan/window/vulkan_window.cpp
         src/vulkan/utils/result_handler.cpp
         src/vulkan/utils/validation_layers.cpp
+        src/vulkan/window/swapchain.cpp
         )
 
 target_include_directories(sylk PRIVATE

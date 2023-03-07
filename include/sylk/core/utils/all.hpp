@@ -7,3 +7,4 @@
 #define SYLK_EXPOSE_LOG_CONSTANTS
 #include "log.hpp"
 #include "rust_style_types.hpp"
+#include "cast.hpp"

@@ -5,6 +5,7 @@
 #pragma once
 
 #include <sylk/core/utils/rust_style_types.hpp>
+#include <sylk/vulkan/utils/constants.hpp>
 
 #include <array>
 #include <vector>
@@ -16,8 +17,8 @@ namespace vk {
 
 namespace sylk {
     class ValidationLayers {
-        static constexpr std::array required_layers_ {
-            "VK_LAYER_KHRONOS_validation"
+        const std::vector<const char*> required_layers_ {
+            VK_LAYER_KHRONOS_NAME
         };
 
         std::vector<std::string> available_layers_;
@@ -36,8 +37,8 @@ namespace sylk {
 
         bool supports_required_layers() ; // NOLINT(modernize-use-nodiscard)
 
-        [[nodiscard]] static u32 enabled_layer_count();
-        [[nodiscard]] static const char* const* enabled_layer_names();
+        [[nodiscard]] u32 enabled_layer_count();
+        [[nodiscard]] const std::vector<const char*>& enabled_layer_names();
 
     private:
         void fetch_available_validation_layers();
