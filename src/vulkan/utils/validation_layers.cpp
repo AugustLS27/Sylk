@@ -15,10 +15,9 @@ namespace sylk {
     {}
 
     // i know this is nearly a duplicate of required_extensions_available() [window.cpp]
-    // however i believe these are the only two usages of this type of container strcmp function
-    // making this modular may actually not be worth it since this function actually compares an std::array
-    // not to mention the class local members that are conditionally filled or not filled.
-    // should there be at least a third case for this type of function, i'll look into doing something with concepts
+    // however, minor differences between what these functions actually are trying to do
+    // makes homogenizing this a bigger pita than is worth right now
+    // perhaps in the future i'll figure out something cleaner
     bool ValidationLayers::supports_required_layers() {
         fetch_available_validation_layers();
 
@@ -70,7 +69,7 @@ namespace sylk {
         return static_cast<u32>(required_layers_.size());
     }
 
-    const std::vector<const char*>& ValidationLayers::enabled_layer_names() {
+    const std::vector<const char*>& ValidationLayers::enabled_layer_container() {
         return required_layers_;
     }
 }

@@ -38,7 +38,7 @@ namespace sylk {
         bool supports_required_layers() ; // NOLINT(modernize-use-nodiscard)
 
         [[nodiscard]] u32 enabled_layer_count();
-        [[nodiscard]] const std::vector<const char*>& enabled_layer_names();
+        [[nodiscard]] const std::vector<const char*>& enabled_layer_container();
 
     private:
         void fetch_available_validation_layers();

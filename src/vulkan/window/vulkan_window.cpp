@@ -16,9 +16,22 @@ namespace sylk {
 
     VulkanWindow::VulkanWindow(const Settings settings)
         : validation_layers_(instance_)
-        , window_(nullptr)
         , settings_(settings)
         , required_extensions_({}) {
+        if (!glfwInit()) {
+            log(CRITICAL, "GLFW initialization failed");
+        }
+
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+
+        auto monitor = (settings.fullscreen ? glfwGetPrimaryMonitor() : nullptr);
+        window_ = glfwCreateWindow(settings_.width, settings_.height, settings_.title, monitor, nullptr);
+
+        create_instance();
+        create_surface();
+        select_physical_device();
+        create_logical_device();
     }
 
     VulkanWindow::~VulkanWindow() {
@@ -78,7 +91,7 @@ namespace sylk {
                 .setPEnabledExtensionNames(required_extensions_)
 #ifdef SYLK_DEBUG
                 .setEnabledLayerCount(validation_layers_.enabled_layer_count())
-                .setPEnabledLayerNames(validation_layers_.enabled_layer_names())
+                .setPEnabledLayerNames(validation_layers_.enabled_layer_container())
 #else
                 .setEnabledLayerCount(0)
 #endif
@@ -164,7 +177,7 @@ namespace sylk {
         log(DEBUG, "Selected device: {}", physical_device_.getProperties().deviceName);
     }
 
-    VulkanWindow::QueueFamilyIndices VulkanWindow::find_queue_families(const vk::PhysicalDevice& device) const {
+    VulkanWindow::QueueFamilyIndices VulkanWindow::find_queue_families(vk::PhysicalDevice device) const {
         QueueFamilyIndices indices;
         const auto families = device.getQueueFamilyProperties();
 
@@ -184,7 +197,7 @@ namespace sylk {
         return indices;
     }
 
-    bool VulkanWindow::device_is_suitable(const vk::PhysicalDevice& device,
+    bool VulkanWindow::device_is_suitable(vk::PhysicalDevice device,
                                           vk::PhysicalDeviceType required_device_type) const {
         return device.getProperties().deviceType == required_device_type
                && find_queue_families(device).has_required()
@@ -215,7 +228,7 @@ namespace sylk {
                 .setPEnabledExtensionNames(required_device_extensions_)
 #ifdef SYLK_DEBUG
                 .setEnabledLayerCount(validation_layers_.enabled_layer_count())
-                .setPEnabledLayerNames(validation_layers_.enabled_layer_names()) // For backward compatibility with older VK implementations
+                .setPEnabledLayerNames(validation_layers_.enabled_layer_container()) // For backward compatibility with older VK implementations
 #else
                 .setEnabledLayerCount(0)
 #endif
@@ -233,7 +246,7 @@ namespace sylk {
                       "Failed to create window surface");
     }
 
-    bool VulkanWindow::device_supports_required_extensions(const vk::PhysicalDevice& device) const {
+    bool VulkanWindow::device_supports_required_extensions(vk::PhysicalDevice device) const {
         const auto dev_ext_props = device.enumerateDeviceExtensionProperties();
 
         for (const auto& req_ext : required_device_extensions_) {
@@ -253,29 +266,16 @@ namespace sylk {
         log(DEBUG, "All required device extensions were found");
         return true;
     }
-
-    void VulkanWindow::init() {
-        if (!glfwInit()) {
-            log(CRITICAL, "GLFW initialization failed");
-        }
-
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-
-        auto monitor = nullptr;// (settings.fullscreen ? glfwGetPrimaryMonitor() : nullptr);
-        window_ = glfwCreateWindow(settings_.width, settings_.height, settings_.title, monitor, nullptr);
-
-        create_instance();
-        create_surface();
-        select_physical_device();
-        create_logical_device();
-    }
-
-    // There is a GCC/Clang bug which causes an erroneous compiler error
-    // unless we default this constructor in the cpp file.
-    // The cause appears to be having nested class/struct declarations.
-    // This is not a skill issue.
-    // For more details, see https://bugs.llvm.org/show_bug.cgi?id=36684 (Clang)
-    // and https://gcc.gnu.org/bugzilla/show_bug.cgi?id=88165 (GCC)
-    VulkanWindow::Settings::Settings() = default;
 }
+
+
+
+
+
+// There is a GCC/Clang bug which causes an erroneous compiler error
+// unless we default this constructor in the cpp file.
+// The cause appears to be having nested class/struct declarations.
+// This is not a skill issue.
+// For more details, see https://bugs.llvm.org/show_bug.cgi?id=36684 (Clang)
+// and https://gcc.gnu.org/bugzilla/show_bug.cgi?id=88165 (GCC)
+sylk::VulkanWindow::Settings::Settings() = default;

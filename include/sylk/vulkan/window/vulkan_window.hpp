@@ -62,7 +62,6 @@ namespace sylk {
         void render() const;
 
         [[nodiscard]] bool is_open() const;
-        void init();
 
     private:
         void create_instance();
@@ -72,11 +71,11 @@ namespace sylk {
 
         std::span<const char*> fetch_required_extensions(bool force_update = false);
         bool required_extensions_available(); // NOLINT(modernize-use-nodiscard)
-        [[nodiscard]] bool device_is_suitable(const vk::PhysicalDevice& device,
+        [[nodiscard]] bool device_is_suitable(vk::PhysicalDevice device,
                                               vk::PhysicalDeviceType required_device_type = vk::PhysicalDeviceType::eDiscreteGpu) const;
-        [[nodiscard]] bool device_supports_required_extensions(const vk::PhysicalDevice& device) const;
+        [[nodiscard]] bool device_supports_required_extensions(vk::PhysicalDevice device) const;
 
-        QueueFamilyIndices find_queue_families(const vk::PhysicalDevice& device) const;
+        QueueFamilyIndices find_queue_families(vk::PhysicalDevice device) const;
 
     };
 }

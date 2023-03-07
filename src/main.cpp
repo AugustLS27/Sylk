@@ -11,7 +11,6 @@
 
 int main() {
     sylk::VulkanWindow window;
-    window.init();
 
     while (window.is_open()) {
         window.poll_events();
