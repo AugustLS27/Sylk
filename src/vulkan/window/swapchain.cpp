@@ -16,9 +16,11 @@ constexpr sylk::u32 U32_LIMIT = std::numeric_limits<sylk::u32>::max();
 
 namespace sylk {
     void Swapchain::create(CreateParams params) {
+        device_ = params.device;
 
         const auto surface_format = select_surface_format(params.support_details.surface_formats);
         const auto present_mode = select_present_mode(params.support_details.present_modes);
+
         extent_ = select_extent_2d(params.support_details.surface_capabilities, params.window);
         format_ = surface_format.format;
 
@@ -45,12 +47,15 @@ namespace sylk {
                 .setClipped(true)
                 .setOldSwapchain(nullptr);
 
-        swapchain_ = params.device.createSwapchainKHR(create_info, nullptr);
-        images_ = params.device.getSwapchainImagesKHR(swapchain_);
+        swapchain_ = device_.createSwapchainKHR(create_info, nullptr);
+        images_ = device_.getSwapchainImagesKHR(swapchain_);
     }
 
-    void Swapchain::destroy(vk::Device device) {
-        device.destroySwapchainKHR(swapchain_);
+    void Swapchain::destroy() {
+        for (auto view : image_views_) {
+            device_.destroyImageView(view);
+        }
+        device_.destroySwapchainKHR(swapchain_);
     }
 
     Swapchain::SupportDetails Swapchain::query_device_support_details(vk::PhysicalDevice device, vk::SurfaceKHR surface) const {
@@ -104,5 +109,37 @@ namespace sylk {
                                           capabilities.maxImageExtent.height);
 
         return actual_extent;
+    }
+
+    const std::vector<vk::Image>& Swapchain::retrieve_images() const {
+        return images_;
+    }
+
+    void Swapchain::create_image_views() {
+        image_views_.resize(images_.size());
+
+        const auto component_mappings = vk::ComponentMapping()
+                .setR(vk::ComponentSwizzle::eIdentity)
+                .setG(vk::ComponentSwizzle::eIdentity)
+                .setB(vk::ComponentSwizzle::eIdentity)
+                .setA(vk::ComponentSwizzle::eIdentity);
+
+        const auto subresource_range = vk::ImageSubresourceRange()
+                .setAspectMask(vk::ImageAspectFlagBits::eColor)
+                .setBaseMipLevel(0)
+                .setLevelCount(1)
+                .setBaseArrayLayer(0)
+                .setLayerCount(1);
+
+        for (u64 i = 0; i < images_.size(); ++i) {
+            const auto create_info = vk::ImageViewCreateInfo()
+                    .setImage(images_[i])
+                    .setViewType(vk::ImageViewType::e2D)
+                    .setFormat(format_)
+                    .setComponents(component_mappings)
+                    .setSubresourceRange(subresource_range);
+
+            image_views_[i] = device_.createImageView(create_info);
+        }
     }
 }

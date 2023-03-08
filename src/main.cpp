@@ -3,9 +3,6 @@
 //
 
 #include <sylk/vulkan/window/vulkan_window.hpp>
-#include <sylk/core/utils/log.hpp>
-
-#include <iostream>
 
 int main() {
     sylk::VulkanWindow window;

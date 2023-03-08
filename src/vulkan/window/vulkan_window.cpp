@@ -27,7 +27,7 @@ namespace sylk {
     }
 
     VulkanWindow::~VulkanWindow() {
-        swapchain_.destroy(device_);
+        swapchain_.destroy();
         device_.destroy();
         instance_.destroySurfaceKHR(surface_);
         instance_.destroy();

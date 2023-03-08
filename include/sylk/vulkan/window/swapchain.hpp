@@ -32,11 +32,15 @@ namespace sylk {
 
     public:
         void create(CreateParams params);
-        void destroy(vk::Device device);
+        void destroy();
+
+        const std::vector<vk::Image>& retrieve_images() const;
 
         SupportDetails query_device_support_details(vk::PhysicalDevice device, vk::SurfaceKHR surface) const;
 
     private:
+        void create_image_views();
+
         vk::SurfaceFormatKHR select_surface_format(const std::vector<vk::SurfaceFormatKHR>& available_formats) const;
         vk::PresentModeKHR select_present_mode(const std::vector<vk::PresentModeKHR>& available_modes) const;
         vk::Extent2D select_extent_2d(const vk::SurfaceCapabilitiesKHR capabilities, GLFWwindow* window) const;
@@ -46,6 +50,8 @@ namespace sylk {
         vk::Format format_;
         vk::Extent2D extent_;
         std::vector<vk::Image> images_;
+        std::vector<vk::ImageView> image_views_;
+        vk::Device device_;
     };
 
 }
