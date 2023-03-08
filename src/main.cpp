@@ -3,11 +3,9 @@
 //
 
 #include <sylk/vulkan/window/vulkan_window.hpp>
+#include <sylk/core/utils/log.hpp>
 
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/vec4.hpp>
-#include <glm/mat4x4.hpp>
+#include <iostream>
 
 int main() {
     sylk::VulkanWindow window;
@@ -15,5 +13,4 @@ int main() {
     while (window.is_open()) {
         window.poll_events();
     }
-
 }

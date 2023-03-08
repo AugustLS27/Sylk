@@ -63,18 +63,15 @@ namespace sylk {
             if (!was_initialized) {
                 was_initialized = true;
 
-                std::time_t tnow;
-
-                logger->set_pattern("%^%v%l%$");
-                constexpr auto spdlog_level = static_cast<spdlog::level::level_enum>(SYLK_LOG_LEVEL);
-                logger->log(spdlog_level, "Minimum logger output level: ");
+                logger->set_pattern("%^%v%$");
+                logger->set_level(static_cast<spdlog::level::level_enum>(SYLK_LOG_LEVEL));
+                logger->log(static_cast<spdlog::level::level_enum>(ELogLevel::INFO), "--- Sylk v{}\n", SYLK_VERSION);
 
                 logger->set_pattern("%^<%n>%$ %v");
-                logger->set_level(spdlog_level);
             }
         }
         inline static bool was_initialized {false};
-        inline static SpdLogger logger {spdlog::stdout_color_st("sylk")};
+        inline static SpdLogger logger {spdlog::stdout_color_st("Sylk")};
     };
 
     template<typename... Args>

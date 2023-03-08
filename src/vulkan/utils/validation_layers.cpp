@@ -50,11 +50,11 @@ namespace sylk {
             return;
         }
 
-        log(DEBUG, "Querying available validation layers...");
+        log(TRACE, "Querying available validation layers...");
         const auto available_layers = vk::enumerateInstanceLayerProperties();
 
         if (available_layers.empty()) {
-            log(WARN, "No validation layers were detected");
+            log(ERROR, "No validation layers were detected");
             return;
         }
 

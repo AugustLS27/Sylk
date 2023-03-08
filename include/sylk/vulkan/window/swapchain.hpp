@@ -7,6 +7,9 @@
 #include <vulkan/vulkan.hpp>
 
 #include <vector>
+#include <sylk/core/utils/rust_style_types.hpp>
+
+struct GLFWwindow;
 
 namespace sylk {
 
@@ -18,12 +21,31 @@ namespace sylk {
             std::vector<vk::PresentModeKHR> present_modes;
         };
 
-    private:
+        struct CreateParams {
+            GLFWwindow* window;
+            Swapchain::SupportDetails support_details;
+            vk::Device device;
+            vk::SurfaceKHR surface;
+            vk::SharingMode sharing_mode;
+            std::vector<u32>& queue_family_indices;
+        };
 
     public:
-        SupportDetails device_support_details(vk::PhysicalDevice device, vk::SurfaceKHR surface);
+        void create(CreateParams params);
+        void destroy(vk::Device device);
 
+        SupportDetails query_device_support_details(vk::PhysicalDevice device, vk::SurfaceKHR surface) const;
 
+    private:
+        vk::SurfaceFormatKHR select_surface_format(const std::vector<vk::SurfaceFormatKHR>& available_formats) const;
+        vk::PresentModeKHR select_present_mode(const std::vector<vk::PresentModeKHR>& available_modes) const;
+        vk::Extent2D select_extent_2d(const vk::SurfaceCapabilitiesKHR capabilities, GLFWwindow* window) const;
+
+    private:
+        vk::SwapchainKHR swapchain_;
+        vk::Format format_;
+        vk::Extent2D extent_;
+        std::vector<vk::Image> images_;
     };
 
 }

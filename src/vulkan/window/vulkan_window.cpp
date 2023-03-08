@@ -18,31 +18,22 @@ namespace sylk {
         : validation_layers_(instance_)
         , settings_(settings)
         , required_extensions_({}) {
-        if (!glfwInit()) {
-            log(CRITICAL, "GLFW initialization failed");
-        }
-
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-
-        auto monitor = (settings.fullscreen ? glfwGetPrimaryMonitor() : nullptr);
-        window_ = glfwCreateWindow(settings_.width, settings_.height, settings_.title, monitor, nullptr);
-
+        init_glfw();
         create_instance();
         create_surface();
         select_physical_device();
         create_logical_device();
+        create_swapchain();
     }
 
     VulkanWindow::~VulkanWindow() {
-        if (window_) {
-            instance_.destroySurfaceKHR(surface_);
-            instance_.destroy();
-            device_.destroy();
-            
-            glfwDestroyWindow(window_);
-            glfwTerminate();
-        }
+        swapchain_.destroy(device_);
+        device_.destroy();
+        instance_.destroySurfaceKHR(surface_);
+        instance_.destroy();
+
+        glfwDestroyWindow(window_);
+        glfwTerminate();
     }
 
     bool VulkanWindow::is_open() const {
@@ -57,7 +48,7 @@ namespace sylk {
     }
 
     std::span<const char*> VulkanWindow::fetch_required_extensions(bool force_update) {
-        log(DEBUG, "Querying available Vulkan extensions...");
+        log(TRACE, "Querying available Vulkan extensions...");
 
         if (required_extensions_.empty() || force_update) {
             u32 ext_count;
@@ -100,7 +91,7 @@ namespace sylk {
         handle_result(vk::createInstance(&instance_create_info, nullptr, &instance_),
                       "Failed to create Vulkan instance", true);
 
-        log(INFO, "Created Vulkan instance.");
+        log(DEBUG, "Created Vulkan instance.");
 
     }
 
@@ -149,32 +140,40 @@ namespace sylk {
             return;
         }
 
-        for (const auto& dev : physical_devices) {
+        std::vector<std::pair<vk::PhysicalDevice, i16>> eligible_devices;
+
+        for (const auto dev : physical_devices) {
             log(TRACE, "Found device: {}", dev.getProperties().deviceName);
+            const auto device_type = dev.getProperties().deviceType;
+            i16 score = 0;
+
+            if (device_type == vk::PhysicalDeviceType::eDiscreteGpu) {
+                score += 1000;
+                eligible_devices.emplace_back(dev, score);
+            } else if (device_type == vk::PhysicalDeviceType::eIntegratedGpu) {
+                score += 200;
+                eligible_devices.emplace_back(dev, score);
+            }
+        }
+
+        if (eligible_devices.empty()) {
+            log(ERROR, "No suitable GPU detected");
+            return;
+        }
+
+        std::sort(eligible_devices.begin(), eligible_devices.end(),
+                  [=] (std::pair<vk::PhysicalDevice, i16> a, std::pair<vk::PhysicalDevice, i16> b) {
+                      return a.second > b.second;
+                  });
+
+        for (const auto [dev, score] : eligible_devices) {
             if (device_is_suitable(dev)) {
                 physical_device_ = dev;
                 break;
             }
         }
 
-        // If no discrete GPU is found, opt for integrated card instead
-        if (physical_device_ == vk::PhysicalDevice()) {
-            bool found = false;
-            for (const auto& dev : physical_devices) {
-                if (device_is_suitable(dev, vk::PhysicalDeviceType::eIntegratedGpu)) {
-                    physical_device_ = dev;
-                    found = true;
-                    break;
-                }
-            }
-
-            if (!found) {
-                log(ERROR, "No suitable GPU found");
-                return;
-            }
-        }
-
-        log(DEBUG, "Selected device: {}", physical_device_.getProperties().deviceName);
+        log(INFO, "Selected device: {}", physical_device_.getProperties().deviceName);
     }
 
     VulkanWindow::QueueFamilyIndices VulkanWindow::find_queue_families(vk::PhysicalDevice device) const {
@@ -197,11 +196,14 @@ namespace sylk {
         return indices;
     }
 
-    bool VulkanWindow::device_is_suitable(vk::PhysicalDevice device,
-                                          vk::PhysicalDeviceType required_device_type) const {
-        return device.getProperties().deviceType == required_device_type
-               && find_queue_families(device).has_required()
-               && device_supports_required_extensions(device);
+    bool VulkanWindow::device_is_suitable(vk::PhysicalDevice device) const {
+        Swapchain::SupportDetails swapchain_support = swapchain_.query_device_support_details(device, surface_);
+        bool swapchain_supported = !swapchain_support.surface_formats.empty()
+                                && !swapchain_support.present_modes.empty();
+
+        return find_queue_families(device).has_required()
+               && device_supports_required_extensions(device)
+               && swapchain_supported;
     }
 
     void VulkanWindow::create_logical_device() {
@@ -244,6 +246,8 @@ namespace sylk {
         auto tmp_surface = VkSurfaceKHR(surface_);
         handle_result(cast<vk::Result>(glfwCreateWindowSurface(instance_, window_, nullptr, &tmp_surface)),
                       "Failed to create window surface");
+
+        surface_ = tmp_surface;
     }
 
     bool VulkanWindow::device_supports_required_extensions(vk::PhysicalDevice device) const {
@@ -265,6 +269,44 @@ namespace sylk {
 
         log(DEBUG, "All required device extensions were found");
         return true;
+    }
+
+    void VulkanWindow::init_glfw() {
+        if (!glfwInit()) {
+            log(CRITICAL, "GLFW initialization failed");
+        }
+
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+
+        auto monitor = (settings_.fullscreen ? glfwGetPrimaryMonitor() : nullptr);
+        window_ = glfwCreateWindow(settings_.width, settings_.height, settings_.title, monitor, nullptr);
+
+        log(DEBUG, "Launched window");
+    }
+
+    void VulkanWindow::create_swapchain() {
+        const auto queue_family_indices = find_queue_families(physical_device_);
+        std::vector queue_families {queue_family_indices.graphics.value(), queue_family_indices.presentation.value()};
+        const bool queues_equal = queue_family_indices.graphics == queue_family_indices.presentation;
+
+        // exclusive mode does not require specified queue families
+        if (!queues_equal) {
+            queue_families.clear();
+        }
+
+        const Swapchain::CreateParams params {
+            .window = window_,
+            .support_details = swapchain_.query_device_support_details(physical_device_, surface_),
+            .device = device_,
+            .surface = surface_,
+            .sharing_mode = (queues_equal ? vk::SharingMode::eExclusive : vk::SharingMode::eConcurrent),
+            .queue_family_indices = queue_families,
+        };
+
+        swapchain_.create(params);
+
+        log(DEBUG, "Created swapchain");
     }
 }
 
