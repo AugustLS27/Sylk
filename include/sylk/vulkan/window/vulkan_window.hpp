@@ -7,6 +7,7 @@
 #include <sylk/core/utils/rust_style_types.hpp>
 #include <sylk/vulkan/utils/validation_layers.hpp>
 #include <sylk/vulkan/window/swapchain.hpp>
+#include <sylk/vulkan/window/graphics_pipeline.hpp>
 
 #include <vector>
 #include <span>
@@ -55,6 +56,7 @@ namespace sylk {
         void create_logical_device();
         void create_surface();
         void create_swapchain();
+        void create_renderpass();
 
         auto fetch_required_extensions(bool force_update = false) -> std::span<const char*>;
         auto required_extensions_available() -> bool;
@@ -69,6 +71,7 @@ namespace sylk {
         Settings settings_;
         ValidationLayers validation_layers_;
         Swapchain swapchain_;
+        GraphicsPipeline graphics_pipeline_;
 
         // stl
         std::vector<const char*> required_extensions_;
@@ -84,6 +87,7 @@ namespace sylk {
         vk::Device device_;
         vk::PhysicalDevice physical_device_;
         vk::SurfaceKHR surface_;
+        vk::RenderPass renderpass_;
 
     };
 }

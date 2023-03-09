@@ -14,12 +14,12 @@ namespace sylk {
         vertex_shader_.create("../../shaders/vk/spv/vert.spv");
         fragment_shader_.create("../../shaders/vk/spv/frag.spv");
 
-        auto vert_stage_info = vk::PipelineShaderStageCreateInfo()
+        const auto vert_stage_info = vk::PipelineShaderStageCreateInfo()
                 .setModule(vertex_shader_.get_module())
                 .setPName(DEFAULT_SHADER_ENTRY_NAME)
                 .setStage(vk::ShaderStageFlagBits::eVertex);
 
-        auto frag_stage_info = vk::PipelineShaderStageCreateInfo()
+        const auto frag_stage_info = vk::PipelineShaderStageCreateInfo()
                 .setModule(fragment_shader_.get_module())
                 .setPName(DEFAULT_SHADER_ENTRY_NAME)
                 .setStage(vk::ShaderStageFlagBits::eFragment);
@@ -34,25 +34,25 @@ namespace sylk {
                 vk::DynamicState::eScissor,
         };
 
-        auto dynamic_state_info = vk::PipelineDynamicStateCreateInfo().setDynamicStates(dynamic_states);
+        const auto dynamic_state_info = vk::PipelineDynamicStateCreateInfo().setDynamicStates(dynamic_states);
 
-        auto vertex_input_state_info = vk::PipelineVertexInputStateCreateInfo()
+        const auto vertex_input_state_info = vk::PipelineVertexInputStateCreateInfo()
                 .setVertexAttributeDescriptionCount(0)
                 .setVertexBindingDescriptionCount(0);
         
-        auto input_assembly_state_info = vk::PipelineInputAssemblyStateCreateInfo()
+        const auto input_assembly_state_info = vk::PipelineInputAssemblyStateCreateInfo()
                 .setTopology(vk::PrimitiveTopology::eTriangleList)
                 .setPrimitiveRestartEnable(false);
 
-        auto viewport = vk::Viewport({}, {}, cast<f32>(extent.width), cast<f32>(extent.height), {}, 1.f);
+        const auto viewport = vk::Viewport({}, {}, cast<f32>(extent.width), cast<f32>(extent.height), {}, 1.f);
 
-        auto scissor = vk::Rect2D({}, extent);
+        const auto scissor = vk::Rect2D({}, extent);
 
-        auto viewport_state_info = vk::PipelineViewportStateCreateInfo()
+        const auto viewport_state_info = vk::PipelineViewportStateCreateInfo()
                 .setViewports(viewport)
                 .setScissors(scissor);
 
-        auto rasterizer = vk::PipelineRasterizationStateCreateInfo()
+        const auto rasterizer = vk::PipelineRasterizationStateCreateInfo()
                 .setDepthClampEnable(false)
                 .setDepthBiasEnable(false)
                 .setRasterizerDiscardEnable(false)
@@ -61,11 +61,11 @@ namespace sylk {
                 .setCullMode(vk::CullModeFlagBits::eBack)
                 .setFrontFace(vk::FrontFace::eClockwise);
 
-        auto multisampling = vk::PipelineMultisampleStateCreateInfo()
+        const auto multisampling = vk::PipelineMultisampleStateCreateInfo()
                 .setSampleShadingEnable(false)
                 .setRasterizationSamples(vk::SampleCountFlagBits::e1);
 
-        auto color_blend_attachment = vk::PipelineColorBlendAttachmentState()
+        const auto color_blend_attachment = vk::PipelineColorBlendAttachmentState()
                 .setColorWriteMask(vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG
                                     | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA)
                 .setBlendEnable(true)
@@ -76,11 +76,11 @@ namespace sylk {
                 .setDstAlphaBlendFactor(vk::BlendFactor::eZero)
                 .setAlphaBlendOp(vk::BlendOp::eAdd);
 
-        auto color_blending = vk::PipelineColorBlendStateCreateInfo()
+        const auto color_blending = vk::PipelineColorBlendStateCreateInfo()
                 .setLogicOpEnable(false)
                 .setAttachments(color_blend_attachment);
 
-        auto layout_create_info = vk::PipelineLayoutCreateInfo();
+        const auto layout_create_info = vk::PipelineLayoutCreateInfo();
 
         layout_ = device_.createPipelineLayout(layout_create_info);
 

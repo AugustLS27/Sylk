@@ -142,4 +142,8 @@ namespace sylk {
             image_views_[i] = device_.createImageView(create_info);
         }
     }
+
+    vk::Format Swapchain::get_format() const {
+        return format_;
+    }
 }

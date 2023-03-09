@@ -17,7 +17,9 @@ namespace sylk {
     VulkanWindow::VulkanWindow(const Settings settings)
         : validation_layers_(instance_)
         , settings_(settings)
-        , required_extensions_({}) {
+        , required_extensions_({})
+        , graphics_pipeline_(device_)
+        {
         init_glfw();
         create_instance();
         create_surface();
@@ -27,6 +29,8 @@ namespace sylk {
     }
 
     VulkanWindow::~VulkanWindow() {
+        graphics_pipeline_.destroy();
+        device_.destroyRenderPass(renderpass_);
         swapchain_.destroy();
         device_.destroy();
         instance_.destroySurfaceKHR(surface_);
@@ -307,6 +311,34 @@ namespace sylk {
         swapchain_.create(params);
 
         log(DEBUG, "Created swapchain");
+    }
+
+    void VulkanWindow::create_renderpass() {
+        const auto color_attachment = vk::AttachmentDescription()
+                .setFormat(swapchain_.get_format())
+                .setSamples(vk::SampleCountFlagBits::e1)
+                .setLoadOp(vk::AttachmentLoadOp::eClear)
+                .setStoreOp(vk::AttachmentStoreOp::eStore)
+                .setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
+                .setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
+                .setInitialLayout(vk::ImageLayout::eUndefined)
+                .setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+
+        const auto color_attachment_ref = vk::AttachmentReference()
+                .setAttachment(0)
+                .setLayout(vk::ImageLayout::eColorAttachmentOptimal);
+
+        const auto subpass = vk::SubpassDescription()
+                .setPipelineBindPoint(vk::PipelineBindPoint::eGraphics)
+                .setColorAttachments(color_attachment_ref);
+
+        const auto render_pass_info = vk::RenderPassCreateInfo()
+                .setAttachments(color_attachment)
+                .setSubpasses(subpass);
+
+        renderpass_ = device_.createRenderPass(render_pass_info);
+
+        log(TRACE, "Created render pass");
     }
 }
 
