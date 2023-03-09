@@ -2,13 +2,12 @@
 // Created by August on 25-2-23.
 //
 
-#include "glad/glad.h"
+#include <glad/glad.h>
 
-#include "sylk/shader/shader.hpp"
-#include "sylk/coreutils/all.hpp"
+#include <sylk/core/utils/all.hpp>
+#include <sylk/opengl/shader/shader.hpp>
 
 #include <fstream>
-#include <sstream>
 #include <string>
 
 namespace sylk {

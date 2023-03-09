@@ -63,11 +63,14 @@ add_executable(sylk
         src/vulkan/utils/result_handler.cpp
         src/vulkan/utils/validation_layers.cpp
         src/vulkan/window/swapchain.cpp
+        src/vulkan/window/graphics_pipeline.cpp
+        src/vulkan/shader/shader.cpp
         )
 
 target_include_directories(sylk PRIVATE
-        "src/"
-        "include/"
+        src/
+        include/
+        include/libs
         )
 
 target_link_libraries(sylk PRIVATE

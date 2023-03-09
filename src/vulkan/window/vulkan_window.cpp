@@ -317,7 +317,7 @@ namespace sylk {
 // There is a GCC/Clang bug which causes an erroneous compiler error
 // unless we default this constructor in the cpp file.
 // The cause appears to be having nested class/struct declarations.
-// This is not a skill issue.
+// The error wasn't my fault for once.
 // For more details, see https://bugs.llvm.org/show_bug.cgi?id=36684 (Clang)
 // and https://gcc.gnu.org/bugzilla/show_bug.cgi?id=88165 (GCC)
 sylk::VulkanWindow::Settings::Settings() = default;
