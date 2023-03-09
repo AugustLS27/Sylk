@@ -25,7 +25,7 @@ namespace sylk {
 
     private:
         const vk::Device& device_;
-        std::vector<u32> shader_code_;
+        std::vector<char> shader_code_;
         vk::ShaderModule shader_module_;
     };
 }

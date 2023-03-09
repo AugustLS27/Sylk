@@ -26,6 +26,8 @@ namespace sylk {
         select_physical_device();
         create_logical_device();
         create_swapchain();
+        create_renderpass();
+        graphics_pipeline_.create(swapchain_.get_extent(), renderpass_);
     }
 
     VulkanWindow::~VulkanWindow() {

@@ -3,14 +3,15 @@
 //
 
 #include <sylk/vulkan/window/graphics_pipeline.hpp>
+#include <sylk/core/utils/all.hpp>
+#include <sylk/vulkan/utils/result_handler.hpp>
 
 #include <array>
-#include "sylk/core/utils/cast.hpp"
 
 constexpr const char* DEFAULT_SHADER_ENTRY_NAME = "main";
 
 namespace sylk {
-    void GraphicsPipeline::create(vk::Extent2D extent) {
+    void GraphicsPipeline::create(vk::Extent2D extent, vk::RenderPass renderpass) {
         vertex_shader_.create("../../shaders/vk/spv/vert.spv");
         fragment_shader_.create("../../shaders/vk/spv/frag.spv");
 
@@ -52,7 +53,7 @@ namespace sylk {
                 .setViewports(viewport)
                 .setScissors(scissor);
 
-        const auto rasterizer = vk::PipelineRasterizationStateCreateInfo()
+        const auto rasterizer_info = vk::PipelineRasterizationStateCreateInfo()
                 .setDepthClampEnable(false)
                 .setDepthBiasEnable(false)
                 .setRasterizerDiscardEnable(false)
@@ -61,7 +62,7 @@ namespace sylk {
                 .setCullMode(vk::CullModeFlagBits::eBack)
                 .setFrontFace(vk::FrontFace::eClockwise);
 
-        const auto multisampling = vk::PipelineMultisampleStateCreateInfo()
+        const auto multisampling_info = vk::PipelineMultisampleStateCreateInfo()
                 .setSampleShadingEnable(false)
                 .setRasterizationSamples(vk::SampleCountFlagBits::e1);
 
@@ -76,17 +77,34 @@ namespace sylk {
                 .setDstAlphaBlendFactor(vk::BlendFactor::eZero)
                 .setAlphaBlendOp(vk::BlendOp::eAdd);
 
-        const auto color_blending = vk::PipelineColorBlendStateCreateInfo()
+        const auto color_blend_info = vk::PipelineColorBlendStateCreateInfo()
                 .setLogicOpEnable(false)
                 .setAttachments(color_blend_attachment);
 
-        const auto layout_create_info = vk::PipelineLayoutCreateInfo();
+        const auto layout_info = vk::PipelineLayoutCreateInfo();
+        layout_ = device_.createPipelineLayout(layout_info);
 
-        layout_ = device_.createPipelineLayout(layout_create_info);
+        const auto pipeline_info = vk::GraphicsPipelineCreateInfo()
+                .setStages(shader_stages)
+                .setPVertexInputState(&vertex_input_state_info)
+                .setPInputAssemblyState(&input_assembly_state_info)
+                .setPViewportState(&viewport_state_info)
+                .setPRasterizationState(&rasterizer_info)
+                .setPMultisampleState(&multisampling_info)
+                .setPColorBlendState(&color_blend_info)
+                .setPDynamicState(&dynamic_state_info)
+                .setLayout(layout_)
+                .setRenderPass(renderpass)
+                .setSubpass(0);
 
+        auto [result, value] = device_.createGraphicsPipeline(nullptr, pipeline_info);
+        handle_result(result, "Failed to create graphics pipeline", true);
+        pipeline_ = value;
 
         vertex_shader_.destroy();
         fragment_shader_.destroy();
+
+        log(DEBUG, "Created graphics pipeline");
     }
 
     GraphicsPipeline::GraphicsPipeline(const vk::Device& device)
@@ -95,6 +113,7 @@ namespace sylk {
         , vertex_shader_(device) {}
 
     void GraphicsPipeline::destroy() const {
+        device_.destroyPipeline(pipeline_);
         device_.destroyPipelineLayout(layout_);
     }
 }

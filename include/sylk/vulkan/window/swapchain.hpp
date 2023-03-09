@@ -36,6 +36,7 @@ namespace sylk {
 
         const std::vector<vk::Image>& retrieve_images() const;
         vk::Format get_format() const;
+        vk::Extent2D get_extent() const;
 
         SupportDetails query_device_support_details(vk::PhysicalDevice device, vk::SurfaceKHR surface) const;
 

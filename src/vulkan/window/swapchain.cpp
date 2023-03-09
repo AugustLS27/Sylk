@@ -146,4 +146,8 @@ namespace sylk {
     vk::Format Swapchain::get_format() const {
         return format_;
     }
+
+    vk::Extent2D Swapchain::get_extent() const {
+        return extent_;
+    }
 }

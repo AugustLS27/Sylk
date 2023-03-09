@@ -25,13 +25,15 @@ namespace sylk {
 
         // go back to start of file for reading
         file.seekg(0);
-        file.read(reinterpret_cast<char*>(shader_code_.data()), file_size);
+        file.read(shader_code_.data(), file_size);
 
         create_shader_module();
     }
 
     void Shader::create_shader_module() {
-        const auto create_info = vk::ShaderModuleCreateInfo().setCode(shader_code_);
+        const auto create_info = vk::ShaderModuleCreateInfo()
+                .setPCode(reinterpret_cast<const u32*>(shader_code_.data()))
+                .setCodeSize(shader_code_.size());
         shader_module_ = device_.createShaderModule(create_info);
     }
 
