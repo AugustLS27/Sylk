@@ -9,5 +9,6 @@ int main() {
 
     while (window.is_open()) {
         window.poll_events();
+        //window.render();
     }
 }

@@ -59,9 +59,11 @@ add_executable(sylk
         libs/img/stb_image.cpp
 
         src/main.cpp
-        src/vulkan/window/vulkan_window.cpp
+
         src/vulkan/utils/result_handler.cpp
         src/vulkan/utils/validation_layers.cpp
+        src/vulkan/utils/queue_family_indices.cpp
+        src/vulkan/window/vulkan_window.cpp
         src/vulkan/window/swapchain.cpp
         src/vulkan/window/graphics_pipeline.cpp
         src/vulkan/shader/shader.cpp

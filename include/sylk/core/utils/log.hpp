@@ -21,18 +21,12 @@ namespace sylk {
         OFF
     };
 
-    namespace LogLevel {
         static constexpr ELogLevel TRACE {ELogLevel::TRACE};
         static constexpr ELogLevel DEBUG {ELogLevel::DEBUG};
         static constexpr ELogLevel INFO {ELogLevel::INFO};
         static constexpr ELogLevel WARN {ELogLevel::WARN};
         static constexpr ELogLevel ERROR {ELogLevel::ERROR};
         static constexpr ELogLevel CRITICAL {ELogLevel::CRITICAL}; // Terminates execution
-    }
-
-#ifdef SYLK_EXPOSE_LOG_CONSTANTS
-    using namespace LogLevel;
-#endif
 
 #ifndef SYLK_LOG_LEVEL
 #   if defined(SYLK_VERBOSE)
@@ -108,6 +102,6 @@ namespace sylk {
 
     template<typename... Args>
     void log(const char* msg, Args&&... args) {
-        log(LogLevel::INFO, msg, args...);
+        log(INFO, msg, args...);
     }
 }

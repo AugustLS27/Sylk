@@ -18,7 +18,7 @@
 struct GLFWwindow;
 
 // The functions in this class use auto return type as a reminder to myself
-// To check whether that is what I'd like to go with in the future
+// to check whether that is what I'd like to go with in the future
 
 namespace sylk {
     class VulkanWindow {
@@ -31,21 +31,12 @@ namespace sylk {
             bool fullscreen = false;
         };
 
-        struct QueueFamilyIndices {
-            std::optional<u32> graphics;
-            std::optional<u32> presentation;
-
-            [[nodiscard]] bool has_required() const {
-                return graphics.has_value() && presentation.has_value();
-            }
-        };
-
     public:
         explicit VulkanWindow(Settings settings = {});
         ~VulkanWindow();
 
         void poll_events() const;
-        void render() const;
+        void render();
 
         auto is_open() const -> bool;
 
@@ -55,17 +46,10 @@ namespace sylk {
         void select_physical_device();
         void create_logical_device();
         void create_surface();
-        void create_swapchain();
-        void create_renderpass();
-        void create_command_pool();
-        void create_command_buffer();
-
-        void record_command_buffer(vk::CommandBuffer buffer, u32 image_index);
 
         auto fetch_required_extensions(bool force_update = false) -> std::span<const char*>;
         auto required_extensions_available() -> bool;
         auto device_supports_required_extensions(vk::PhysicalDevice device) const -> bool;
-        auto find_device_queue_families(vk::PhysicalDevice device) const -> QueueFamilyIndices;
         auto device_is_suitable(vk::PhysicalDevice device) const -> bool;
 
     private:
@@ -75,7 +59,6 @@ namespace sylk {
         Settings settings_;
         ValidationLayers validation_layers_;
         Swapchain swapchain_;
-        GraphicsPipeline graphics_pipeline_;
 
         // stl
         std::vector<const char*> required_extensions_;
@@ -91,8 +74,5 @@ namespace sylk {
         vk::Device device_;
         vk::PhysicalDevice physical_device_;
         vk::SurfaceKHR surface_;
-        vk::RenderPass renderpass_;
-        vk::CommandPool command_pool_;
-        vk::CommandBuffer command_buffer_;
     };
 }

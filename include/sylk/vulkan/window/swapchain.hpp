@@ -4,10 +4,12 @@
 
 #pragma once
 
+#include <sylk/core/utils/rust_style_types.hpp>
+#include <sylk/vulkan/window/graphics_pipeline.hpp>
+
 #include <vulkan/vulkan.hpp>
 
 #include <vector>
-#include <sylk/core/utils/rust_style_types.hpp>
 
 struct GLFWwindow;
 
@@ -21,42 +23,50 @@ namespace sylk {
             std::vector<vk::PresentModeKHR> present_modes;
         };
 
-        struct CreateParams {
-            GLFWwindow* window;
-            Swapchain::SupportDetails support_details;
-            vk::Device device;
-            vk::SurfaceKHR surface;
-            vk::SharingMode sharing_mode;
-            std::vector<u32>& queue_family_indices;
-        };
-
     public:
-        void create(CreateParams params);
+        explicit Swapchain(const vk::Device& device);
+        void create(vk::PhysicalDevice physical_device, GLFWwindow* window, vk::SurfaceKHR surface);
         void destroy();
-        void create_framebuffers(vk::RenderPass renderpass);
 
-        const std::vector<vk::Image>& retrieve_images() const;
-        vk::Format get_format() const;
-        vk::Extent2D get_extent() const;
-        vk::Framebuffer get_framebuffer(u32 index) const;
+        void draw_next();
 
         SupportDetails query_device_support_details(vk::PhysicalDevice device, vk::SurfaceKHR surface) const;
 
     private:
         void create_image_views();
+        void create_renderpass();
+        void create_command_pool();
+        void create_command_buffer();
+        void create_framebuffers();
+        void create_synchronizers();
+
+        void record_command_buffer(vk::CommandBuffer buffer, u32 image_index);
+
 
         vk::SurfaceFormatKHR select_surface_format(const std::vector<vk::SurfaceFormatKHR>& available_formats) const;
         vk::PresentModeKHR select_present_mode(const std::vector<vk::PresentModeKHR>& available_modes) const;
         vk::Extent2D select_extent_2d(const vk::SurfaceCapabilitiesKHR capabilities, GLFWwindow* window) const;
 
     private:
+        u32 graphics_queue_family_index_;
+        GraphicsPipeline graphics_pipeline_;
+
+        const vk::Device& device_;
         vk::SwapchainKHR swapchain_;
         vk::Format format_;
         vk::Extent2D extent_;
+        vk::RenderPass renderpass_;
+
+        vk::CommandBuffer command_buffer_;
+        vk::CommandPool command_pool_;
+
+        vk::Semaphore sema_img_available_;
+        vk::Semaphore sema_render_finished_;
+        vk::Fence fence_in_flight_;
+
         std::vector<vk::Image> images_;
         std::vector<vk::ImageView> image_views_;
         std::vector<vk::Framebuffer> frame_buffers_;
-        vk::Device device_;
     };
 
 }

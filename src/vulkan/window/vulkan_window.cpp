@@ -9,6 +9,7 @@
 #include <sylk/core/utils/all.hpp>
 #include <sylk/vulkan/utils/validation_layers.hpp>
 #include <sylk/vulkan/utils/result_handler.hpp>
+#include <sylk/vulkan/utils/queue_family_indices.hpp>
 
 #include <set>
 
@@ -18,30 +19,17 @@ namespace sylk {
         : validation_layers_(instance_)
         , settings_(settings)
         , required_extensions_({})
-        , graphics_pipeline_(device_)
+        , swapchain_(device_)
         {
         init_glfw();
         create_instance();
         create_surface();
         select_physical_device();
         create_logical_device();
-        create_swapchain();
-        create_renderpass();
-        graphics_pipeline_.create(swapchain_.get_extent(), renderpass_);
-        swapchain_.create_framebuffers(renderpass_);
-        create_command_pool();
-        create_command_buffer();
+        swapchain_.create(physical_device_, window_, surface_);
     }
 
     VulkanWindow::~VulkanWindow() {
-        device_.destroyCommandPool(command_pool_);
-        log(TRACE, "Destroyed command pool");
-
-        graphics_pipeline_.destroy();
-
-        device_.destroyRenderPass(renderpass_);
-        log(TRACE, "Destroyed renderpass");
-
         swapchain_.destroy();
 
         device_.destroy();
@@ -66,7 +54,8 @@ namespace sylk {
         glfwPollEvents();
     }
 
-    void VulkanWindow::render() const {
+    void VulkanWindow::render() {
+        swapchain_.draw_next();
     }
 
     std::span<const char*> VulkanWindow::fetch_required_extensions(bool force_update) {
@@ -200,28 +189,6 @@ namespace sylk {
         log(INFO, "Selected device: {}", physical_device_.getProperties().deviceName);
     }
 
-    VulkanWindow::QueueFamilyIndices VulkanWindow::find_device_queue_families(vk::PhysicalDevice device) const {
-        log(TRACE, "Querying available device queue families...");
-
-        QueueFamilyIndices indices;
-        const auto families = device.getQueueFamilyProperties();
-
-        for (i32 i = 0; i < families.size(); ++i) {
-            if(families[i].queueFlags & vk::QueueFlagBits::eGraphics) {
-                indices.graphics = i;
-            }
-
-            if (device.getSurfaceSupportKHR(i, surface_)) {
-                indices.presentation = i;
-            }
-
-            if (indices.has_required()) {
-                break;
-            }
-        }
-        return indices;
-    }
-
     bool VulkanWindow::device_is_suitable(vk::PhysicalDevice device) const {
         log(TRACE, "Verifying device suitability...");
 
@@ -229,13 +196,13 @@ namespace sylk {
         bool swapchain_supported = !swapchain_support.surface_formats.empty()
                                 && !swapchain_support.present_modes.empty();
 
-        return find_device_queue_families(device).has_required()
+        return QueueFamilyIndices::find(device, surface_).has_required()
                && device_supports_required_extensions(device)
                && swapchain_supported;
     }
 
     void VulkanWindow::create_logical_device() {
-        const auto queue_indices = find_device_queue_families(physical_device_);
+        const auto queue_indices = QueueFamilyIndices::find(physical_device_, surface_);
 
         f32 queue_prio = 1.f;
         std::vector<vk::DeviceQueueCreateInfo> queue_create_infos;
@@ -257,8 +224,9 @@ namespace sylk {
                 .setEnabledExtensionCount(cast<u32>(required_device_extensions_.size()))
                 .setPEnabledExtensionNames(required_device_extensions_)
 #ifdef SYLK_DEBUG
+                // For backward compatibility with older VK implementations
                 .setEnabledLayerCount(validation_layers_.enabled_layer_count())
-                .setPEnabledLayerNames(validation_layers_.enabled_layer_container()) // For backward compatibility with older VK implementations
+                .setPEnabledLayerNames(validation_layers_.enabled_layer_container())
 #else
                 .setEnabledLayerCount(0)
 #endif
@@ -317,111 +285,6 @@ namespace sylk {
         window_ = glfwCreateWindow(settings_.width, settings_.height, settings_.title, monitor, nullptr);
 
         log(DEBUG, "Launched window");
-    }
-
-    void VulkanWindow::create_swapchain() {
-        const auto queue_family_indices = find_device_queue_families(physical_device_);
-        std::vector queue_families {queue_family_indices.graphics.value(), queue_family_indices.presentation.value()};
-        const bool queues_equal = queue_family_indices.graphics == queue_family_indices.presentation;
-
-        // exclusive mode does not require specified queue families
-        if (!queues_equal) {
-            queue_families.clear();
-        }
-
-        const Swapchain::CreateParams params {
-            .window = window_,
-            .support_details = swapchain_.query_device_support_details(physical_device_, surface_),
-            .device = device_,
-            .surface = surface_,
-            .sharing_mode = (queues_equal ? vk::SharingMode::eExclusive : vk::SharingMode::eConcurrent),
-            .queue_family_indices = queue_families,
-        };
-
-        swapchain_.create(params);
-    }
-
-    void VulkanWindow::create_renderpass() {
-        const auto color_attachment = vk::AttachmentDescription()
-                .setFormat(swapchain_.get_format())
-                .setSamples(vk::SampleCountFlagBits::e1)
-                .setLoadOp(vk::AttachmentLoadOp::eClear)
-                .setStoreOp(vk::AttachmentStoreOp::eStore)
-                .setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
-                .setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
-                .setInitialLayout(vk::ImageLayout::eUndefined)
-                .setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
-
-        const auto color_attachment_ref = vk::AttachmentReference()
-                .setAttachment(0)
-                .setLayout(vk::ImageLayout::eColorAttachmentOptimal);
-
-        const auto subpass = vk::SubpassDescription()
-                .setPipelineBindPoint(vk::PipelineBindPoint::eGraphics)
-                .setColorAttachments(color_attachment_ref);
-
-        const auto render_pass_info = vk::RenderPassCreateInfo()
-                .setAttachments(color_attachment)
-                .setSubpasses(subpass);
-
-        renderpass_ = device_.createRenderPass(render_pass_info);
-
-        log(TRACE, "Created render pass");
-    }
-
-    void VulkanWindow::create_command_pool() {
-        const auto indices = find_device_queue_families(physical_device_);
-
-        const auto pool_info = vk::CommandPoolCreateInfo()
-                .setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
-                .setQueueFamilyIndex(indices.graphics.value());
-
-        command_pool_ = device_.createCommandPool(pool_info);
-    }
-
-    void VulkanWindow::create_command_buffer() {
-        const auto buffer_alloc_info = vk::CommandBufferAllocateInfo()
-                .setCommandPool(command_pool_)
-                .setLevel(vk::CommandBufferLevel::ePrimary)
-                .setCommandBufferCount(1);
-
-        command_buffer_ = device_.allocateCommandBuffers(buffer_alloc_info).front();
-    }
-
-    void VulkanWindow::record_command_buffer(const vk::CommandBuffer buffer, const u32 image_index) {
-        const auto buffer_begin_info = vk::CommandBufferBeginInfo();
-        buffer.begin(buffer_begin_info);
-
-        const auto swap_extent = swapchain_.get_extent();
-
-        const auto render_area = vk::Rect2D().setExtent(swap_extent);
-        const std::array clear_value = {
-                0.0f, 0.0f, 0.0f, 1.0f
-        };
-        const auto clear_color = vk::ClearValue(clear_value);
-
-        const auto renderpass_begin_info = vk::RenderPassBeginInfo()
-                .setRenderPass(renderpass_)
-                .setFramebuffer(swapchain_.get_framebuffer(image_index))
-                .setRenderArea(render_area)
-                .setClearValues(clear_color);
-
-        buffer.beginRenderPass(renderpass_begin_info, vk::SubpassContents::eInline);
-        buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, graphics_pipeline_.get());
-
-        const auto viewport = vk::Viewport()
-                .setHeight(cast<f32>(swap_extent.height))
-                .setWidth(cast<f32>(swap_extent.width))
-                .setMaxDepth(1.0f);
-        buffer.setViewport(0, viewport);
-
-        const auto scissor = vk::Rect2D().setExtent(swap_extent);
-        buffer.setScissor(0, scissor);
-
-        buffer.draw(3, 1, 0, 0);
-
-        buffer.endRenderPass();
-        buffer.end();
     }
 }
 
