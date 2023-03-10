@@ -31,6 +31,7 @@ namespace sylk {
         void draw_next();
 
         SupportDetails query_device_support_details(vk::PhysicalDevice device, vk::SurfaceKHR surface) const;
+        void set_queues(vk::Queue graphics, vk::Queue present);
 
     private:
         void create_image_views();
@@ -57,7 +58,10 @@ namespace sylk {
         vk::Extent2D extent_;
         vk::RenderPass renderpass_;
 
-        vk::CommandBuffer command_buffer_;
+        vk::Queue graphics_queue_;
+        vk::Queue presentation_queue_;
+
+        std::vector<vk::CommandBuffer> command_buffers_;
         vk::CommandPool command_pool_;
 
         vk::Semaphore sema_img_available_;

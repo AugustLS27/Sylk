@@ -4,6 +4,7 @@
 
 #include <sylk/vulkan/window/swapchain.hpp>
 #include <sylk/vulkan/utils/queue_family_indices.hpp>
+#include <sylk/vulkan/utils/result_handler.hpp>
 #include <sylk/core/utils/all.hpp>
 
 #include <GLFW/glfw3.h>
@@ -218,11 +219,30 @@ namespace sylk {
     }
 
     void Swapchain::draw_next() {
-        device_.waitForFences(fence_in_flight_, true, UINT64_MAX);
+        handle_result(device_.waitForFences(fence_in_flight_, true, UINT64_MAX), "Vulkan Fence error");
         device_.resetFences(fence_in_flight_);
 
-        const auto img_index = device_.acquireNextImageKHR(swapchain_, UINT64_MAX, sema_img_available_);
-        command_buffer_.reset();
+        const auto [result, img_index] = device_.acquireNextImageKHR(swapchain_, UINT64_MAX, sema_img_available_);
+        handle_result(result, "Image acquisition failed");
+
+        command_buffers_[0].reset();
+        record_command_buffer(command_buffers_[0], img_index);
+
+        const vk::PipelineStageFlags wait_stage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+        const auto submit_info = vk::SubmitInfo()
+                .setWaitSemaphores(sema_img_available_)
+                .setWaitDstStageMask(wait_stage)
+                .setSignalSemaphores(sema_render_finished_)
+                .setCommandBuffers(command_buffers_[0]);
+
+        graphics_queue_.submit(submit_info, fence_in_flight_);
+
+        const auto present_info = vk::PresentInfoKHR()
+                .setWaitSemaphores(sema_render_finished_)
+                .setSwapchains(swapchain_)
+                .setImageIndices(img_index);
+
+        handle_result(presentation_queue_.presentKHR(present_info), "Failed to present image");
     }
 
     void Swapchain::record_command_buffer(const vk::CommandBuffer buffer, const u32 image_index) {
@@ -241,8 +261,9 @@ namespace sylk {
                 .setRenderArea(render_area)
                 .setClearValues(clear_color);
 
+        const auto pipeline = graphics_pipeline_.get();
         buffer.beginRenderPass(renderpass_begin_info, vk::SubpassContents::eInline);
-        buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, graphics_pipeline_.get());
+        buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
 
         const auto viewport = vk::Viewport()
                 .setHeight(cast<f32>(extent_.height))
@@ -279,7 +300,7 @@ namespace sylk {
                 .setLevel(vk::CommandBufferLevel::ePrimary)
                 .setCommandBufferCount(1);
 
-        command_buffer_ = device_.allocateCommandBuffers(buffer_alloc_info).front();
+        command_buffers_ = device_.allocateCommandBuffers(buffer_alloc_info);
 
         log(TRACE, "Created command buffer");
     }
@@ -295,20 +316,32 @@ namespace sylk {
                 .setInitialLayout(vk::ImageLayout::eUndefined)
                 .setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
 
-        const auto color_attachment_ref = vk::AttachmentReference()
-                .setAttachment(0)
-                .setLayout(vk::ImageLayout::eColorAttachmentOptimal);
+        const auto color_attachment_ref = vk::AttachmentReference(0, vk::ImageLayout::eColorAttachmentOptimal);
 
         const auto subpass = vk::SubpassDescription()
                 .setPipelineBindPoint(vk::PipelineBindPoint::eGraphics)
                 .setColorAttachments(color_attachment_ref);
 
+        const auto subpass_dependency = vk::SubpassDependency()
+                .setSrcSubpass(VK_SUBPASS_EXTERNAL)
+                .setDstSubpass(0)
+                .setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
+                .setSrcAccessMask(vk::AccessFlagBits::eNone)
+                .setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
+                .setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+
         const auto render_pass_info = vk::RenderPassCreateInfo()
                 .setAttachments(color_attachment)
-                .setSubpasses(subpass);
+                .setSubpasses(subpass)
+                .setDependencies(subpass_dependency);
 
         renderpass_ = device_.createRenderPass(render_pass_info);
 
         log(TRACE, "Created render pass");
+    }
+
+    void Swapchain::set_queues(vk::Queue graphics, vk::Queue present) {
+        graphics_queue_ = graphics;
+        presentation_queue_ = present;
     }
 }

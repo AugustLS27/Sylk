@@ -13,7 +13,7 @@
 namespace sylk {
     void handle_result(vk::Result result, const char* error_message, bool terminate) {
         if (result != vk::Result::eSuccess) {
-            log((terminate ? CRITICAL : ERROR), "{} | {}", error_message, magic_enum::enum_name(result));
+            log((terminate ? CRITICAL : ERROR), "{}: {}", error_message, magic_enum::enum_name(result));
         }
     }
 }

@@ -21,7 +21,7 @@ namespace sylk {
         , required_extensions_({})
         , swapchain_(device_)
         {
-        init_glfw();
+        create_window();
         create_instance();
         create_surface();
         select_physical_device();
@@ -30,6 +30,8 @@ namespace sylk {
     }
 
     VulkanWindow::~VulkanWindow() {
+        device_.waitIdle();
+        
         swapchain_.destroy();
 
         device_.destroy();
@@ -234,8 +236,10 @@ namespace sylk {
 
         device_ = physical_device_.createDevice(dev_create_info);
 
-        device_.getQueue(queue_indices.graphics.value(), 0, &graphics_queue_);
-        device_.getQueue(queue_indices.presentation.value(), 0, &presentation_queue_);
+        swapchain_.set_queues(
+                device_.getQueue(queue_indices.graphics.value(), 0),
+                device_.getQueue(queue_indices.presentation.value(), 0)
+                );
 
         log(DEBUG, "Created Vulkan logical device");
     }
@@ -273,7 +277,7 @@ namespace sylk {
         return true;
     }
 
-    void VulkanWindow::init_glfw() {
+    void VulkanWindow::create_window() {
         if (!glfwInit()) {
             log(CRITICAL, "GLFW initialization failed");
         }

@@ -41,7 +41,7 @@ namespace sylk {
         auto is_open() const -> bool;
 
     private:
-        void init_glfw();
+        void create_window();
         void create_instance();
         void select_physical_device();
         void create_logical_device();

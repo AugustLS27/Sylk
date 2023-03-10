@@ -70,7 +70,6 @@ add_executable(sylk
         )
 
 target_include_directories(sylk PRIVATE
-        src/
         include/
         include/libs
         )
