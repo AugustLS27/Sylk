@@ -6,8 +6,6 @@
 #include <sylk/core/utils/all.hpp>
 #include <sylk/vulkan/utils/result_handler.hpp>
 
-#include <array>
-
 constexpr const char* DEFAULT_SHADER_ENTRY_NAME = "main";
 
 namespace sylk {
@@ -114,6 +112,13 @@ namespace sylk {
 
     void GraphicsPipeline::destroy() const {
         device_.destroyPipeline(pipeline_);
+        log(TRACE, "Destroyed graphics pipeline");
+
         device_.destroyPipelineLayout(layout_);
+        log(TRACE, "Destroyed graphics pipeline layout");
+    }
+
+    vk::Pipeline GraphicsPipeline::get() const {
+        return pipeline_;
     }
 }

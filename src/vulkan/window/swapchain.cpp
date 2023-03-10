@@ -4,13 +4,12 @@
 
 #include <sylk/vulkan/window/swapchain.hpp>
 #include <sylk/vulkan/utils/result_handler.hpp>
-#include <sylk/core/utils/rust_style_types.hpp>
+#include <sylk/core/utils/all.hpp>
 
 #include <GLFW/glfw3.h>
 
 #include <limits>
 #include <algorithm>
-#include <sylk/core/utils/cast.hpp>
 
 constexpr sylk::u32 U32_LIMIT = std::numeric_limits<sylk::u32>::max();
 
@@ -49,16 +48,34 @@ namespace sylk {
 
         swapchain_ = device_.createSwapchainKHR(create_info, nullptr);
         images_ = device_.getSwapchainImagesKHR(swapchain_);
+
+        log(TRACE, "Created swapchain");
+
+        create_image_views();
     }
 
     void Swapchain::destroy() {
+        for (auto framebuffer : frame_buffers_) {
+            device_.destroyFramebuffer(framebuffer);
+        }
+
+        log(TRACE, "Destroyed framebuffers");
+
         for (auto view : image_views_) {
             device_.destroyImageView(view);
         }
+
+        log(TRACE, "Destroyed image views");
+
         device_.destroySwapchainKHR(swapchain_);
+
+        log(TRACE, "Destroyed swapchain");
+
     }
 
     Swapchain::SupportDetails Swapchain::query_device_support_details(vk::PhysicalDevice device, vk::SurfaceKHR surface) const {
+        log(TRACE, "Querying swapchain support details...");
+
         SupportDetails details;
 
         details.surface_capabilities = device.getSurfaceCapabilitiesKHR(surface);
@@ -69,6 +86,8 @@ namespace sylk {
     }
 
     vk::SurfaceFormatKHR Swapchain::select_surface_format(const std::vector<vk::SurfaceFormatKHR>& available_formats) const {
+        log(TRACE, "Selecting swapchain surface format...");
+
         for (const auto& format : available_formats) {
             if (format.format == vk::Format::eB8G8R8A8Srgb && format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
                 return format;
@@ -79,6 +98,8 @@ namespace sylk {
     }
 
     vk::PresentModeKHR Swapchain::select_present_mode(const std::vector<vk::PresentModeKHR>& available_modes) const {
+        log(TRACE, "Selecting swapchain present mode...");
+
         for (const auto& mode : available_modes) {
             if (mode == vk::PresentModeKHR::eMailbox) {
                 return mode;
@@ -89,6 +110,8 @@ namespace sylk {
     }
 
     vk::Extent2D Swapchain::select_extent_2d(const vk::SurfaceCapabilitiesKHR capabilities, GLFWwindow* window) const {
+        log(TRACE, "Selecting swapchain extent...");
+
         if (capabilities.currentExtent.width != U32_LIMIT) {
             return capabilities.currentExtent;
         }
@@ -141,6 +164,8 @@ namespace sylk {
 
             image_views_[i] = device_.createImageView(create_info);
         }
+
+        log(TRACE, "Created swapchain image views");
     }
 
     vk::Format Swapchain::get_format() const {
@@ -149,5 +174,26 @@ namespace sylk {
 
     vk::Extent2D Swapchain::get_extent() const {
         return extent_;
+    }
+
+    void Swapchain::create_framebuffers(const vk::RenderPass renderpass) {
+        frame_buffers_.resize(image_views_.size());
+
+        for (u64 i = 0; i < image_views_.size(); ++i) {
+            const auto framebuffer_info = vk::FramebufferCreateInfo()
+                    .setRenderPass(renderpass)
+                    .setAttachments(image_views_[i])
+                    .setWidth(extent_.width)
+                    .setHeight(extent_.height)
+                    .setLayers(1);
+
+            frame_buffers_[i] = device_.createFramebuffer(framebuffer_info);
+        }
+
+        log(TRACE, "Created framebuffers");
+    }
+
+    vk::Framebuffer Swapchain::get_framebuffer(const u32 index) const {
+        return frame_buffers_[index];
     }
 }

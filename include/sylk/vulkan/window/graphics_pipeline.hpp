@@ -16,6 +16,8 @@ namespace sylk {
         void create(vk::Extent2D extent, vk::RenderPass renderpass);
         void destroy() const;
 
+        vk::Pipeline get() const;
+
     private:
 
     private:

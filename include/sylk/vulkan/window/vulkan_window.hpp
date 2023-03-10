@@ -57,11 +57,15 @@ namespace sylk {
         void create_surface();
         void create_swapchain();
         void create_renderpass();
+        void create_command_pool();
+        void create_command_buffer();
+
+        void record_command_buffer(vk::CommandBuffer buffer, u32 image_index);
 
         auto fetch_required_extensions(bool force_update = false) -> std::span<const char*>;
         auto required_extensions_available() -> bool;
         auto device_supports_required_extensions(vk::PhysicalDevice device) const -> bool;
-        auto find_queue_families(vk::PhysicalDevice device) const -> QueueFamilyIndices;
+        auto find_device_queue_families(vk::PhysicalDevice device) const -> QueueFamilyIndices;
         auto device_is_suitable(vk::PhysicalDevice device) const -> bool;
 
     private:
@@ -88,6 +92,7 @@ namespace sylk {
         vk::PhysicalDevice physical_device_;
         vk::SurfaceKHR surface_;
         vk::RenderPass renderpass_;
-
+        vk::CommandPool command_pool_;
+        vk::CommandBuffer command_buffer_;
     };
 }

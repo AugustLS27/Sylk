@@ -33,10 +33,12 @@ namespace sylk {
     public:
         void create(CreateParams params);
         void destroy();
+        void create_framebuffers(vk::RenderPass renderpass);
 
         const std::vector<vk::Image>& retrieve_images() const;
         vk::Format get_format() const;
         vk::Extent2D get_extent() const;
+        vk::Framebuffer get_framebuffer(u32 index) const;
 
         SupportDetails query_device_support_details(vk::PhysicalDevice device, vk::SurfaceKHR surface) const;
 
@@ -53,6 +55,7 @@ namespace sylk {
         vk::Extent2D extent_;
         std::vector<vk::Image> images_;
         std::vector<vk::ImageView> image_views_;
+        std::vector<vk::Framebuffer> frame_buffers_;
         vk::Device device_;
     };
 

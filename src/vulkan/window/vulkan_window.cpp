@@ -28,18 +28,34 @@ namespace sylk {
         create_swapchain();
         create_renderpass();
         graphics_pipeline_.create(swapchain_.get_extent(), renderpass_);
+        swapchain_.create_framebuffers(renderpass_);
+        create_command_pool();
+        create_command_buffer();
     }
 
     VulkanWindow::~VulkanWindow() {
+        device_.destroyCommandPool(command_pool_);
+        log(TRACE, "Destroyed command pool");
+
         graphics_pipeline_.destroy();
+
         device_.destroyRenderPass(renderpass_);
+        log(TRACE, "Destroyed renderpass");
+
         swapchain_.destroy();
+
         device_.destroy();
+        log(TRACE, "Destroyed logical device object");
+
         instance_.destroySurfaceKHR(surface_);
+        log(TRACE, "Destroyed window surface");
+
         instance_.destroy();
+        log(TRACE, "Destroyed Vulkan instance");
 
         glfwDestroyWindow(window_);
         glfwTerminate();
+        log(TRACE, "Destroyed window");
     }
 
     bool VulkanWindow::is_open() const {
@@ -97,7 +113,7 @@ namespace sylk {
         handle_result(vk::createInstance(&instance_create_info, nullptr, &instance_),
                       "Failed to create Vulkan instance", true);
 
-        log(DEBUG, "Created Vulkan instance.");
+        log(DEBUG, "Created Vulkan instance");
 
     }
 
@@ -139,6 +155,8 @@ namespace sylk {
     }
 
     void VulkanWindow::select_physical_device() {
+        log(TRACE, "Querying available physical devices...");
+
         const auto physical_devices = instance_.enumeratePhysicalDevices();
 
         if (physical_devices.empty()) {
@@ -149,7 +167,7 @@ namespace sylk {
         std::vector<std::pair<vk::PhysicalDevice, i16>> eligible_devices;
 
         for (const auto dev : physical_devices) {
-            log(TRACE, "Found device: {}", dev.getProperties().deviceName);
+            log(TRACE, "  -- Found device: {}", dev.getProperties().deviceName);
             const auto device_type = dev.getProperties().deviceType;
             i16 score = 0;
 
@@ -182,7 +200,9 @@ namespace sylk {
         log(INFO, "Selected device: {}", physical_device_.getProperties().deviceName);
     }
 
-    VulkanWindow::QueueFamilyIndices VulkanWindow::find_queue_families(vk::PhysicalDevice device) const {
+    VulkanWindow::QueueFamilyIndices VulkanWindow::find_device_queue_families(vk::PhysicalDevice device) const {
+        log(TRACE, "Querying available device queue families...");
+
         QueueFamilyIndices indices;
         const auto families = device.getQueueFamilyProperties();
 
@@ -203,17 +223,19 @@ namespace sylk {
     }
 
     bool VulkanWindow::device_is_suitable(vk::PhysicalDevice device) const {
+        log(TRACE, "Verifying device suitability...");
+
         Swapchain::SupportDetails swapchain_support = swapchain_.query_device_support_details(device, surface_);
         bool swapchain_supported = !swapchain_support.surface_formats.empty()
                                 && !swapchain_support.present_modes.empty();
 
-        return find_queue_families(device).has_required()
+        return find_device_queue_families(device).has_required()
                && device_supports_required_extensions(device)
                && swapchain_supported;
     }
 
     void VulkanWindow::create_logical_device() {
-        const auto queue_indices = find_queue_families(physical_device_);
+        const auto queue_indices = find_device_queue_families(physical_device_);
 
         f32 queue_prio = 1.f;
         std::vector<vk::DeviceQueueCreateInfo> queue_create_infos;
@@ -246,6 +268,8 @@ namespace sylk {
 
         device_.getQueue(queue_indices.graphics.value(), 0, &graphics_queue_);
         device_.getQueue(queue_indices.presentation.value(), 0, &presentation_queue_);
+
+        log(DEBUG, "Created Vulkan logical device");
     }
 
     void VulkanWindow::create_surface() {
@@ -254,9 +278,13 @@ namespace sylk {
                       "Failed to create window surface");
 
         surface_ = tmp_surface;
+
+        log(TRACE, "Created window surface");
     }
 
     bool VulkanWindow::device_supports_required_extensions(vk::PhysicalDevice device) const {
+        log(TRACE, "Querying supported device extensions...");
+
         const auto dev_ext_props = device.enumerateDeviceExtensionProperties();
 
         for (const auto& req_ext : required_device_extensions_) {
@@ -292,7 +320,7 @@ namespace sylk {
     }
 
     void VulkanWindow::create_swapchain() {
-        const auto queue_family_indices = find_queue_families(physical_device_);
+        const auto queue_family_indices = find_device_queue_families(physical_device_);
         std::vector queue_families {queue_family_indices.graphics.value(), queue_family_indices.presentation.value()};
         const bool queues_equal = queue_family_indices.graphics == queue_family_indices.presentation;
 
@@ -311,8 +339,6 @@ namespace sylk {
         };
 
         swapchain_.create(params);
-
-        log(DEBUG, "Created swapchain");
     }
 
     void VulkanWindow::create_renderpass() {
@@ -341,6 +367,61 @@ namespace sylk {
         renderpass_ = device_.createRenderPass(render_pass_info);
 
         log(TRACE, "Created render pass");
+    }
+
+    void VulkanWindow::create_command_pool() {
+        const auto indices = find_device_queue_families(physical_device_);
+
+        const auto pool_info = vk::CommandPoolCreateInfo()
+                .setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
+                .setQueueFamilyIndex(indices.graphics.value());
+
+        command_pool_ = device_.createCommandPool(pool_info);
+    }
+
+    void VulkanWindow::create_command_buffer() {
+        const auto buffer_alloc_info = vk::CommandBufferAllocateInfo()
+                .setCommandPool(command_pool_)
+                .setLevel(vk::CommandBufferLevel::ePrimary)
+                .setCommandBufferCount(1);
+
+        command_buffer_ = device_.allocateCommandBuffers(buffer_alloc_info).front();
+    }
+
+    void VulkanWindow::record_command_buffer(const vk::CommandBuffer buffer, const u32 image_index) {
+        const auto buffer_begin_info = vk::CommandBufferBeginInfo();
+        buffer.begin(buffer_begin_info);
+
+        const auto swap_extent = swapchain_.get_extent();
+
+        const auto render_area = vk::Rect2D().setExtent(swap_extent);
+        const std::array clear_value = {
+                0.0f, 0.0f, 0.0f, 1.0f
+        };
+        const auto clear_color = vk::ClearValue(clear_value);
+
+        const auto renderpass_begin_info = vk::RenderPassBeginInfo()
+                .setRenderPass(renderpass_)
+                .setFramebuffer(swapchain_.get_framebuffer(image_index))
+                .setRenderArea(render_area)
+                .setClearValues(clear_color);
+
+        buffer.beginRenderPass(renderpass_begin_info, vk::SubpassContents::eInline);
+        buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, graphics_pipeline_.get());
+
+        const auto viewport = vk::Viewport()
+                .setHeight(cast<f32>(swap_extent.height))
+                .setWidth(cast<f32>(swap_extent.width))
+                .setMaxDepth(1.0f);
+        buffer.setViewport(0, viewport);
+
+        const auto scissor = vk::Rect2D().setExtent(swap_extent);
+        buffer.setScissor(0, scissor);
+
+        buffer.draw(3, 1, 0, 0);
+
+        buffer.endRenderPass();
+        buffer.end();
     }
 }
 

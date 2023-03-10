@@ -2,6 +2,8 @@
 // Created by August Silva on 7-3-23.
 //
 
+#pragma once
+
 namespace sylk {
     template<typename T>
     concept NotTriviallyCopyable = !std::is_trivially_copyable_v<T>;
