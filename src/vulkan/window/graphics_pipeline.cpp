@@ -13,15 +13,17 @@ namespace sylk {
         vertex_shader_.create("../../shaders/vk/spv/vert.spv");
         fragment_shader_.create("../../shaders/vk/spv/frag.spv");
 
-        const auto vert_stage_info = vk::PipelineShaderStageCreateInfo()
-                .setModule(vertex_shader_.get_module())
-                .setPName(DEFAULT_SHADER_ENTRY_NAME)
-                .setStage(vk::ShaderStageFlagBits::eVertex);
+        const auto vert_stage_info = vk::PipelineShaderStageCreateInfo {
+                .stage  = vk::ShaderStageFlagBits::eVertex,
+                .module = vertex_shader_.get_module(),
+                .pName  = DEFAULT_SHADER_ENTRY_NAME,
+        };
 
-        const auto frag_stage_info = vk::PipelineShaderStageCreateInfo()
-                .setModule(fragment_shader_.get_module())
-                .setPName(DEFAULT_SHADER_ENTRY_NAME)
-                .setStage(vk::ShaderStageFlagBits::eFragment);
+        const auto frag_stage_info = vk::PipelineShaderStageCreateInfo {
+                .stage  = vk::ShaderStageFlagBits::eFragment,
+                .module = fragment_shader_.get_module(),
+                .pName  = DEFAULT_SHADER_ENTRY_NAME,
+        };
 
         const std::array shader_stages = {
                 vert_stage_info,
@@ -35,45 +37,56 @@ namespace sylk {
 
         const auto dynamic_state_info = vk::PipelineDynamicStateCreateInfo().setDynamicStates(dynamic_states);
 
-        const auto vertex_input_state_info = vk::PipelineVertexInputStateCreateInfo()
-                .setVertexAttributeDescriptionCount(0)
-                .setVertexBindingDescriptionCount(0);
-        
-        const auto input_assembly_state_info = vk::PipelineInputAssemblyStateCreateInfo()
-                .setTopology(vk::PrimitiveTopology::eTriangleList)
-                .setPrimitiveRestartEnable(false);
+        const auto vertex_input_state_info = vk::PipelineVertexInputStateCreateInfo {
+                .vertexBindingDescriptionCount   = 0,
+                .vertexAttributeDescriptionCount = 0,
+        };
 
-        const auto viewport = vk::Viewport({}, {}, cast<f32>(extent.width), cast<f32>(extent.height), {}, 1.f);
+        const auto input_assembly_state_info = vk::PipelineInputAssemblyStateCreateInfo {
+                .topology               = vk::PrimitiveTopology::eTriangleList,
+                .primitiveRestartEnable = false,
+        };
 
-        const auto scissor = vk::Rect2D({}, extent);
+        const auto viewport = vk::Viewport {
+                .width    = cast<f32>(extent.width),
+                .height   = cast<f32>(extent.height),
+                .maxDepth = 1.0f,
+        };
+
+        const auto scissor = vk::Rect2D {
+            .extent = extent
+        };
 
         const auto viewport_state_info = vk::PipelineViewportStateCreateInfo()
                 .setViewports(viewport)
                 .setScissors(scissor);
 
-        const auto rasterizer_info = vk::PipelineRasterizationStateCreateInfo()
-                .setDepthClampEnable(false)
-                .setDepthBiasEnable(false)
-                .setRasterizerDiscardEnable(false)
-                .setPolygonMode(vk::PolygonMode::eFill)
-                .setLineWidth(1.0f)
-                .setCullMode(vk::CullModeFlagBits::eBack)
-                .setFrontFace(vk::FrontFace::eClockwise);
+        const auto rasterizer_info = vk::PipelineRasterizationStateCreateInfo {
+                .depthClampEnable        = false,
+                .rasterizerDiscardEnable = false,
+                .polygonMode             = vk::PolygonMode::eFill,
+                .cullMode                = vk::CullModeFlagBits::eBack,
+                .frontFace               = vk::FrontFace::eClockwise,
+                .depthBiasEnable         = false,
+                .lineWidth               = 1.0f,
+        };
 
-        const auto multisampling_info = vk::PipelineMultisampleStateCreateInfo()
-                .setSampleShadingEnable(false)
-                .setRasterizationSamples(vk::SampleCountFlagBits::e1);
+        const auto multisampling_info = vk::PipelineMultisampleStateCreateInfo {
+            .rasterizationSamples = vk::SampleCountFlagBits::e1,
+            .sampleShadingEnable  = true,
+        };
 
-        const auto color_blend_attachment = vk::PipelineColorBlendAttachmentState()
-                .setColorWriteMask(vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG
-                                    | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA)
-                .setBlendEnable(true)
-                .setSrcColorBlendFactor(vk::BlendFactor::eSrcAlpha)
-                .setDstColorBlendFactor(vk::BlendFactor::eOneMinusSrcAlpha)
-                .setColorBlendOp(vk::BlendOp::eAdd)
-                .setSrcAlphaBlendFactor(vk::BlendFactor::eOne)
-                .setDstAlphaBlendFactor(vk::BlendFactor::eZero)
-                .setAlphaBlendOp(vk::BlendOp::eAdd);
+        const auto color_blend_attachment = vk::PipelineColorBlendAttachmentState {
+                .blendEnable         = true,
+                .srcColorBlendFactor = vk::BlendFactor::eSrcAlpha,
+                .dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha,
+                .colorBlendOp        = vk::BlendOp::eAdd,
+                .srcAlphaBlendFactor = vk::BlendFactor::eOne,
+                .dstAlphaBlendFactor = vk::BlendFactor::eZero,
+                .alphaBlendOp        = vk::BlendOp::eAdd,
+                .colorWriteMask      = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG
+                                        | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA,
+        };
 
         const auto color_blend_info = vk::PipelineColorBlendStateCreateInfo()
                 .setLogicOpEnable(false)
@@ -108,9 +121,7 @@ namespace sylk {
     }
 
     GraphicsPipeline::GraphicsPipeline(const vk::Device& device)
-        : device_(device)
-        , fragment_shader_(device)
-        , vertex_shader_(device) {}
+            : device_(device), fragment_shader_(device), vertex_shader_(device) {}
 
     void GraphicsPipeline::destroy() const {
         device_.destroyPipeline(pipeline_);

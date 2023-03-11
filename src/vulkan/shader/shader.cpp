@@ -35,10 +35,11 @@ namespace sylk {
         // casting from char is well defined, so this does not break strict aliasing rules
         // alignment is also not an issue due to how vector allocates its data
         // also, vulkan guarantees the endianness of the host and device are the same,
-        // and the sorts of machines that sylk targets are likely to be in the expected endianness
-        const auto create_info = vk::ShaderModuleCreateInfo()
-                .setPCode(reinterpret_cast<const u32*>(shader_code_.data()))
-                .setCodeSize(shader_code_.size());
+        // and the sorts of machines that sylk targets are highly likely to be in the expected endianness
+        const auto create_info = vk::ShaderModuleCreateInfo{
+                .codeSize = shader_code_.size(),
+                .pCode    = reinterpret_cast<const u32*>(shader_code_.data()),
+        };
 
         const auto [result, shader] = device_.createShaderModule(create_info);
         handle_result(result, "Failed to create shader module");
