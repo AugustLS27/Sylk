@@ -26,6 +26,7 @@ namespace sylk {
     public:
         explicit Swapchain(const vk::Device& device);
         void create(vk::PhysicalDevice physical_device, GLFWwindow* window, vk::SurfaceKHR surface);
+        void recreate();
         void destroy();
 
         void draw_next();
@@ -34,6 +35,8 @@ namespace sylk {
         void set_queues(vk::Queue graphics, vk::Queue present);
 
     private:
+        void setup_swapchain();
+        void destroy_partial();
         void create_image_views();
         void create_renderpass();
         void create_command_pool();
@@ -49,10 +52,15 @@ namespace sylk {
         vk::Extent2D select_extent_2d(const vk::SurfaceCapabilitiesKHR capabilities, GLFWwindow* window) const;
 
     private:
+        u32 current_frame_;
         u32 graphics_queue_family_index_;
         GraphicsPipeline graphics_pipeline_;
 
+        GLFWwindow* window_;
+
         const vk::Device& device_;
+        vk::PhysicalDevice physical_device_;
+        vk::SurfaceKHR surface_;
         vk::SwapchainKHR swapchain_;
         vk::Format format_;
         vk::Extent2D extent_;
@@ -64,9 +72,9 @@ namespace sylk {
         std::vector<vk::CommandBuffer> command_buffers_;
         vk::CommandPool command_pool_;
 
-        vk::Semaphore sema_img_available_;
-        vk::Semaphore sema_render_finished_;
-        vk::Fence fence_in_flight_;
+        std::vector<vk::Semaphore> semaphores_img_available_;
+        std::vector<vk::Semaphore> semaphores_render_finished_;
+        std::vector<vk::Fence> fences_in_flight_;
 
         std::vector<vk::Image> images_;
         std::vector<vk::ImageView> image_views_;

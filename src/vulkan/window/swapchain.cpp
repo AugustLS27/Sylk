@@ -13,55 +13,27 @@
 #include <algorithm>
 
 constexpr sylk::u32 U32_LIMIT = std::numeric_limits<sylk::u32>::max();
+constexpr sylk::i32 MAX_FRAMES_IN_FLIGHT = 2;
 
 namespace sylk {
+    Swapchain::Swapchain(const vk::Device& device)
+            : device_(device)
+            , graphics_pipeline_(device)
+            , command_buffers_(MAX_FRAMES_IN_FLIGHT)
+            , semaphores_img_available_(MAX_FRAMES_IN_FLIGHT)
+            , semaphores_render_finished_(MAX_FRAMES_IN_FLIGHT)
+            , fences_in_flight_(MAX_FRAMES_IN_FLIGHT)
+            , current_frame_(0)
+    {}
+
     void Swapchain::create(vk::PhysicalDevice physical_device, GLFWwindow* window, vk::SurfaceKHR surface) {
         log(TRACE, "Creating swapchain...");
 
-        const auto queue_family_indices = QueueFamilyIndices::find(physical_device, surface);
-        graphics_queue_family_index_ = queue_family_indices.graphics.value();
-        std::vector queue_families {graphics_queue_family_index_, queue_family_indices.presentation.value()};
-        const bool queues_equal = queue_family_indices.graphics == queue_family_indices.presentation;
+        physical_device_ = physical_device;
+        window_ = window;
+        surface_ = surface;
 
-        // exclusive mode does not require specified queue families
-        if (!queues_equal) {
-            queue_families.clear();
-        }
-        const auto sharing_mode = (queues_equal ? vk::SharingMode::eExclusive : vk::SharingMode::eConcurrent);
-
-        const auto support_details = query_device_support_details(physical_device, surface);
-        const auto surface_format = select_surface_format(support_details.surface_formats);
-        const auto present_mode = select_present_mode(support_details.present_modes);
-
-        extent_ = select_extent_2d(support_details.surface_capabilities, window);
-        format_ = surface_format.format;
-
-        const auto max_image_count = support_details.surface_capabilities.maxImageCount;
-        const auto min_image_count = support_details.surface_capabilities.minImageCount + 1;
-        const bool has_max_images = max_image_count > 0;
-
-        auto swapchain_img_count = (has_max_images && min_image_count > max_image_count ?
-                                    max_image_count : min_image_count);
-
-        auto create_info = vk::SwapchainCreateInfoKHR()
-                .setSurface(surface)
-                .setMinImageCount(swapchain_img_count)
-                .setImageFormat(format_)
-                .setImageColorSpace(surface_format.colorSpace)
-                .setImageExtent(extent_)
-                .setImageArrayLayers(1)
-                .setImageUsage(vk::ImageUsageFlagBits::eColorAttachment)
-                .setImageSharingMode(sharing_mode)
-                .setQueueFamilyIndices(queue_families)
-                .setPreTransform(support_details.surface_capabilities.currentTransform)
-                .setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)
-                .setPresentMode(present_mode)
-                .setClipped(true)
-                .setOldSwapchain(nullptr);
-
-        swapchain_ = device_.createSwapchainKHR(create_info, nullptr);
-        images_ = device_.getSwapchainImagesKHR(swapchain_);
-
+        setup_swapchain();
         create_image_views();
         create_renderpass();
         graphics_pipeline_.create(extent_, renderpass_);
@@ -82,24 +54,14 @@ namespace sylk {
         device_.destroyRenderPass(renderpass_);
         log(TRACE, "Destroyed renderpass");
 
-        device_.destroySemaphore(sema_img_available_);
-        device_.destroySemaphore(sema_render_finished_);
-        device_.destroyFence(fence_in_flight_);
+        for (u64 i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
+            device_.destroySemaphore(semaphores_img_available_[i]);
+            device_.destroySemaphore(semaphores_render_finished_[i]);
+            device_.destroyFence(fences_in_flight_[i]);
+        }
         log(TRACE, "Destroyed synchronization objects");
 
-        for (auto framebuffer : frame_buffers_) {
-            device_.destroyFramebuffer(framebuffer);
-        }
-        log(TRACE, "Destroyed framebuffers");
-
-        for (auto view : image_views_) {
-            device_.destroyImageView(view);
-        }
-        log(TRACE, "Destroyed image views");
-
-        device_.destroySwapchainKHR(swapchain_);
-        log(TRACE, "Destroyed swapchain");
-
+        destroy_partial();
     }
 
     Swapchain::SupportDetails Swapchain::query_device_support_details(vk::PhysicalDevice device, vk::SurfaceKHR surface) const {
@@ -130,7 +92,7 @@ namespace sylk {
         log(TRACE, "Selecting swapchain present mode...");
 
         for (const auto& mode : available_modes) {
-            if (mode == vk::PresentModeKHR::eMailbox) {
+            if (mode == vk::PresentModeKHR::eImmediate) {
                 return mode;
             }
         }
@@ -211,38 +173,44 @@ namespace sylk {
     }
 
     void Swapchain::create_synchronizers() {
-        sema_img_available_ = device_.createSemaphore(vk::SemaphoreCreateInfo());
-        sema_render_finished_ = device_.createSemaphore(vk::SemaphoreCreateInfo());
-        fence_in_flight_ = device_.createFence(vk::FenceCreateInfo().setFlags(vk::FenceCreateFlagBits::eSignaled));
+
+        for (u64 i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
+            semaphores_img_available_[i] = device_.createSemaphore(vk::SemaphoreCreateInfo());
+            semaphores_render_finished_[i] = device_.createSemaphore(vk::SemaphoreCreateInfo());
+            fences_in_flight_[i] = device_.createFence(vk::FenceCreateInfo().setFlags(vk::FenceCreateFlagBits::eSignaled));
+        }
+        
 
         log(TRACE, "Created synchronizer objects");
     }
 
     void Swapchain::draw_next() {
-        handle_result(device_.waitForFences(fence_in_flight_, true, UINT64_MAX), "Vulkan Fence error");
-        device_.resetFences(fence_in_flight_);
+        handle_result(device_.waitForFences(fences_in_flight_[current_frame_], true, UINT64_MAX), "Vulkan Fence error");
+        device_.resetFences(fences_in_flight_[current_frame_]);
 
-        const auto [result, img_index] = device_.acquireNextImageKHR(swapchain_, UINT64_MAX, sema_img_available_);
+        const auto [result, img_index] = device_.acquireNextImageKHR(swapchain_, UINT64_MAX, semaphores_img_available_[current_frame_]);
         handle_result(result, "Image acquisition failed");
 
-        command_buffers_[0].reset();
-        record_command_buffer(command_buffers_[0], img_index);
+        command_buffers_[current_frame_].reset();
+        record_command_buffer(command_buffers_[current_frame_], img_index);
 
         const vk::PipelineStageFlags wait_stage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
         const auto submit_info = vk::SubmitInfo()
-                .setWaitSemaphores(sema_img_available_)
+                .setWaitSemaphores(semaphores_img_available_[current_frame_])
                 .setWaitDstStageMask(wait_stage)
-                .setSignalSemaphores(sema_render_finished_)
-                .setCommandBuffers(command_buffers_[0]);
+                .setSignalSemaphores(semaphores_render_finished_[current_frame_])
+                .setCommandBuffers(command_buffers_[current_frame_]);
 
-        graphics_queue_.submit(submit_info, fence_in_flight_);
+        graphics_queue_.submit(submit_info, fences_in_flight_[current_frame_]);
 
         const auto present_info = vk::PresentInfoKHR()
-                .setWaitSemaphores(sema_render_finished_)
+                .setWaitSemaphores(semaphores_render_finished_[current_frame_])
                 .setSwapchains(swapchain_)
                 .setImageIndices(img_index);
 
         handle_result(presentation_queue_.presentKHR(present_info), "Failed to present image");
+
+        current_frame_ = ++current_frame_ % MAX_FRAMES_IN_FLIGHT;
     }
 
     void Swapchain::record_command_buffer(const vk::CommandBuffer buffer, const u32 image_index) {
@@ -280,11 +248,6 @@ namespace sylk {
         buffer.end();
     }
 
-    Swapchain::Swapchain(const vk::Device& device)
-        : device_(device)
-        , graphics_pipeline_(device)
-        {}
-
     void Swapchain::create_command_pool() {
         const auto pool_info = vk::CommandPoolCreateInfo()
                 .setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
@@ -298,7 +261,7 @@ namespace sylk {
         const auto buffer_alloc_info = vk::CommandBufferAllocateInfo()
                 .setCommandPool(command_pool_)
                 .setLevel(vk::CommandBufferLevel::ePrimary)
-                .setCommandBufferCount(1);
+                .setCommandBufferCount(cast<u32>(command_buffers_.size()));
 
         command_buffers_ = device_.allocateCommandBuffers(buffer_alloc_info);
 
@@ -343,5 +306,76 @@ namespace sylk {
     void Swapchain::set_queues(vk::Queue graphics, vk::Queue present) {
         graphics_queue_ = graphics;
         presentation_queue_ = present;
+    }
+
+    void Swapchain::destroy_partial() {
+        for (auto framebuffer : frame_buffers_) {
+            device_.destroyFramebuffer(framebuffer);
+        }
+        log(TRACE, "Destroyed framebuffers");
+
+        for (auto view : image_views_) {
+            device_.destroyImageView(view);
+        }
+        log(TRACE, "Destroyed image views");
+
+        device_.destroySwapchainKHR(swapchain_);
+        log(TRACE, "Destroyed swapchain");
+    }
+
+    void Swapchain::recreate() {
+        device_.waitIdle();
+
+        destroy_partial();
+
+        setup_swapchain();
+        create_image_views();
+        create_framebuffers();
+    }
+
+    void Swapchain::setup_swapchain() {
+        const auto queue_family_indices = QueueFamilyIndices::find(physical_device_, surface_);
+        graphics_queue_family_index_ = queue_family_indices.graphics.value();
+        std::vector queue_families {graphics_queue_family_index_, queue_family_indices.presentation.value()};
+        const bool queues_equal = queue_family_indices.graphics == queue_family_indices.presentation;
+
+        // exclusive mode does not require specified queue families
+        if (!queues_equal) {
+            queue_families.clear();
+        }
+        const auto sharing_mode = (queues_equal ? vk::SharingMode::eExclusive : vk::SharingMode::eConcurrent);
+
+        const auto support_details = query_device_support_details(physical_device_, surface_);
+        const auto surface_format = select_surface_format(support_details.surface_formats);
+        const auto present_mode = select_present_mode(support_details.present_modes);
+
+        extent_ = select_extent_2d(support_details.surface_capabilities, window_);
+        format_ = surface_format.format;
+
+        const auto max_image_count = support_details.surface_capabilities.maxImageCount;
+        const auto min_image_count = support_details.surface_capabilities.minImageCount + 1;
+        const bool has_max_images = max_image_count > 0;
+
+        auto swapchain_img_count = (has_max_images && min_image_count > max_image_count ?
+                                    max_image_count : min_image_count);
+
+        auto create_info = vk::SwapchainCreateInfoKHR()
+                .setSurface(surface_)
+                .setMinImageCount(swapchain_img_count)
+                .setImageFormat(format_)
+                .setImageColorSpace(surface_format.colorSpace)
+                .setImageExtent(extent_)
+                .setImageArrayLayers(1)
+                .setImageUsage(vk::ImageUsageFlagBits::eColorAttachment)
+                .setImageSharingMode(sharing_mode)
+                .setQueueFamilyIndices(queue_families)
+                .setPreTransform(support_details.surface_capabilities.currentTransform)
+                .setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)
+                .setPresentMode(present_mode)
+                .setClipped(true)
+                .setOldSwapchain(nullptr);
+
+        swapchain_ = device_.createSwapchainKHR(create_info, nullptr);
+        images_ = device_.getSwapchainImagesKHR(swapchain_);
     }
 }
