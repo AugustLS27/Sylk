@@ -2,7 +2,7 @@
 // Created by August Silva on 25-2-23.
 //
 
-#include <vulkan/vulkan.hpp>
+#include <sylk/vulkan/vulkan.hpp>
 #include <GLFW/glfw3.h>
 
 #include <sylk/vulkan/window/vulkan_window.hpp>
@@ -30,22 +30,22 @@ namespace sylk {
     }
 
     VulkanWindow::~VulkanWindow() {
-        device_.waitIdle();
+        handle_result(device_.waitIdle(), "Device error");
         
         swapchain_.destroy();
 
         device_.destroy();
-        log(TRACE, "Destroyed logical device object");
+        log(ELogLvl::TRACE, "Destroyed logical device object");
 
         instance_.destroySurfaceKHR(surface_);
-        log(TRACE, "Destroyed window surface");
+        log(ELogLvl::TRACE, "Destroyed window surface");
 
         instance_.destroy();
-        log(TRACE, "Destroyed Vulkan instance");
+        log(ELogLvl::TRACE, "Destroyed Vulkan instance");
 
         glfwDestroyWindow(window_);
         glfwTerminate();
-        log(TRACE, "Destroyed window");
+        log(ELogLvl::TRACE, "Destroyed window");
     }
 
     bool VulkanWindow::is_open() const {
@@ -61,7 +61,7 @@ namespace sylk {
     }
 
     std::span<const char*> VulkanWindow::fetch_required_extensions(bool force_update) {
-        log(TRACE, "Querying available Vulkan extensions...");
+        log(ELogLvl::TRACE, "Querying available Vulkan extensions...");
 
         if (required_extensions_.empty() || force_update) {
             u32 ext_count;
@@ -74,7 +74,7 @@ namespace sylk {
 
     void VulkanWindow::create_instance() {
         if (ValidationLayers::enabled() && !validation_layers_.supports_required_layers()) {
-            log(CRITICAL, "Missing validation layers are likely a flaw of an incomplete Vulkan SDK.\n"
+            log(ELogLvl::CRITICAL, "Missing validation layers are likely a flaw of an incomplete Vulkan SDK.\n"
                           "Consider installing the LunarG Vulkan SDK, or run Sylk in Release mode to "
                           "disable validation layers altogether.\n"
                           "Sylk will now shut down.");
@@ -101,25 +101,27 @@ namespace sylk {
 #endif
                 ;
 
+        
         handle_result(vk::createInstance(&instance_create_info, nullptr, &instance_),
-                      "Failed to create Vulkan instance", true);
+                      "Failed to create Vulkan instance", ELogLvl::CRITICAL);
 
-        log(DEBUG, "Created Vulkan instance");
+        log(ELogLvl::DEBUG, "Created Vulkan instance");
 
     }
 
     bool VulkanWindow::required_extensions_available() {
-        const std::vector<vk::ExtensionProperties> ext_props = vk::enumerateInstanceExtensionProperties();
+        const auto [result, ext_props] = vk::enumerateInstanceExtensionProperties();
+        handle_result(result, "Failed to enumerate instance extension properties");
 
-        log(TRACE, "Available extensions:");
+        log(ELogLvl::TRACE, "Available extensions:");
         for (const auto& ext: ext_props) {
             available_extensions_.emplace_back(ext.extensionName);
-            log(TRACE, "   -- {}", available_extensions_.back());
+            log(ELogLvl::TRACE, "   -- {}", available_extensions_.back());
         }
 
-        log(TRACE, "Required extensions:");
+        log(ELogLvl::TRACE, "Required extensions:");
         for (const auto& ext: required_extensions_) {
-            log(TRACE, "   -- {}", ext);
+            log(ELogLvl::TRACE, "   -- {}", ext);
         }
 
         bool all_available = true;
@@ -133,32 +135,33 @@ namespace sylk {
             }
 
             if (!ext_found) {
-                log(ERROR, "Required Vulkan extension \"{}\" was not found on this device", req_ext);
+                log(ELogLvl::ERROR, "Required Vulkan extension \"{}\" was not found on this device", req_ext);
                 all_available = false;
             }
         }
 
         if (all_available) {
-            log(DEBUG, "All required Vulkan extensions are available");
+            log(ELogLvl::DEBUG, "All required Vulkan extensions are available");
         }
 
         return all_available;
     }
 
     void VulkanWindow::select_physical_device() {
-        log(TRACE, "Querying available physical devices...");
+        log(ELogLvl::TRACE, "Querying available physical devices...");
 
-        const auto physical_devices = instance_.enumeratePhysicalDevices();
+        const auto [result, physical_devices] = instance_.enumeratePhysicalDevices();
+        handle_result(result, "Failed to enumerate physical devices");
 
         if (physical_devices.empty()) {
-            log(CRITICAL, "No graphics cards were located on this device.");
+            log(ELogLvl::CRITICAL, "No graphics cards were located on this device.");
             return;
         }
 
         std::vector<std::pair<vk::PhysicalDevice, i16>> eligible_devices;
 
         for (const auto dev : physical_devices) {
-            log(TRACE, "  -- Found device: {}", dev.getProperties().deviceName);
+            log(ELogLvl::TRACE, "  -- Found device: {}", dev.getProperties().deviceName);
             const auto device_type = dev.getProperties().deviceType;
             i16 score = 0;
 
@@ -172,7 +175,7 @@ namespace sylk {
         }
 
         if (eligible_devices.empty()) {
-            log(ERROR, "No suitable GPU detected");
+            log(ELogLvl::ERROR, "No suitable GPU detected");
             return;
         }
 
@@ -188,11 +191,11 @@ namespace sylk {
             }
         }
 
-        log(INFO, "Selected device: {}", physical_device_.getProperties().deviceName);
+        log(ELogLvl::INFO, "Selected device: {}", physical_device_.getProperties().deviceName);
     }
 
     bool VulkanWindow::device_is_suitable(vk::PhysicalDevice device) const {
-        log(TRACE, "Verifying device suitability...");
+        log(ELogLvl::TRACE, "Verifying device suitability...");
 
         Swapchain::SupportDetails swapchain_support = swapchain_.query_device_support_details(device, surface_);
         bool swapchain_supported = !swapchain_support.surface_formats.empty()
@@ -234,14 +237,16 @@ namespace sylk {
 #endif
                 ;
 
-        device_ = physical_device_.createDevice(dev_create_info);
+        const auto [result, dev] = physical_device_.createDevice(dev_create_info);
+        handle_result(result, "Failed to create logical Vulkan device", ELogLvl::CRITICAL);
+        device_ = dev;
 
         swapchain_.set_queues(
                 device_.getQueue(queue_indices.graphics.value(), 0),
                 device_.getQueue(queue_indices.presentation.value(), 0)
                 );
 
-        log(DEBUG, "Created Vulkan logical device");
+        log(ELogLvl::DEBUG, "Created Vulkan logical device");
     }
 
     void VulkanWindow::create_surface() {
@@ -251,13 +256,14 @@ namespace sylk {
 
         surface_ = tmp_surface;
 
-        log(TRACE, "Created window surface");
+        log(ELogLvl::TRACE, "Created window surface");
     }
 
     bool VulkanWindow::device_supports_required_extensions(vk::PhysicalDevice device) const {
-        log(TRACE, "Querying supported device extensions...");
+        log(ELogLvl::TRACE, "Querying supported device extensions...");
 
-        const auto dev_ext_props = device.enumerateDeviceExtensionProperties();
+        const auto [result, dev_ext_props] = device.enumerateDeviceExtensionProperties();
+        handle_result(result, "Failed to enumerate device's extension properties");
 
         for (const auto& req_ext : required_device_extensions_) {
             bool found = false;
@@ -268,18 +274,18 @@ namespace sylk {
             }
 
             if (!found) {
-                log(ERROR, "Missing required device extension: {}", req_ext);
+                log(ELogLvl::ERROR, "Missing required device extension: {}", req_ext);
                 return false;
             }
         }
 
-        log(DEBUG, "All required device extensions were found");
+        log(ELogLvl::DEBUG, "All required device extensions were found");
         return true;
     }
 
     void VulkanWindow::create_window() {
         if (!glfwInit()) {
-            log(CRITICAL, "GLFW initialization failed");
+            log(ELogLvl::CRITICAL, "GLFW initialization failed");
         }
 
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -288,7 +294,7 @@ namespace sylk {
         auto monitor = (settings_.fullscreen ? glfwGetPrimaryMonitor() : nullptr);
         window_ = glfwCreateWindow(settings_.width, settings_.height, settings_.title, monitor, nullptr);
 
-        log(DEBUG, "Launched window");
+        log(ELogLvl::DEBUG, "Launched window");
     }
 }
 

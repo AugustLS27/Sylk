@@ -4,9 +4,8 @@
 
 #pragma once
 
+#include <sylk/vulkan/vulkan.hpp>
 #include <sylk/vulkan/shader/shader.hpp>
-
-#include <vulkan/vulkan.hpp>
 
 namespace sylk {
 

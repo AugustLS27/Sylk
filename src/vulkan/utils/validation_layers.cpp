@@ -2,11 +2,11 @@
 // Created by August Silva on 5-3-23.
 //
 
-#include <vulkan/vulkan.hpp>
+#include <sylk/vulkan/vulkan.hpp>
 #include <magic_enum/magic_enum.hpp>
 
 #include <sylk/vulkan/utils/validation_layers.hpp>
-#define SYLK_EXPOSE_LOG_CONSTANTS
+#include <sylk/vulkan/utils/result_handler.hpp>
 #include <sylk/core/utils/log.hpp>
 
 namespace sylk {
@@ -32,13 +32,13 @@ namespace sylk {
             }
 
             if (!found) {
-                log(ERROR, "Required validation layer \"{}\" was not found on this device", req_layer);
+                log(ELogLvl::ERROR, "Required validation layer \"{}\" was not found on this device", req_layer);
                 all_available = false;
             }
         }
 
         if (all_available) {
-            log(DEBUG, "All required validation layers were located");
+            log(ELogLvl::DEBUG, "All required validation layers were located");
         }
 
         return all_available;
@@ -50,18 +50,19 @@ namespace sylk {
             return;
         }
 
-        log(TRACE, "Querying available validation layers...");
-        const auto available_layers = vk::enumerateInstanceLayerProperties();
+        log(ELogLvl::TRACE, "Querying available validation layers...");
+        const auto [result, available_layers] = vk::enumerateInstanceLayerProperties();
+        handle_result(result, "Failed to fetch validation layers");
 
         if (available_layers.empty()) {
-            log(ERROR, "No validation layers were detected");
+            log(ELogLvl::ERROR, "No validation layers were detected");
             return;
         }
 
-        log(TRACE, "Layers found:");
+        log(ELogLvl::TRACE, "Layers found:");
         for (const auto& layer : available_layers) {
             available_layers_.emplace_back(layer.layerName);
-            log(TRACE, "  -- {}", available_layers_.back());
+            log(ELogLvl::TRACE, "  -- {}", available_layers_.back());
         }
     }
 

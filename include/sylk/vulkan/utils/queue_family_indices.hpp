@@ -6,7 +6,7 @@
 
 #include <sylk/core/utils/rust_style_types.hpp>
 
-#include <vulkan/vulkan.hpp>
+#include <sylk/vulkan/vulkan.hpp>
 
 #include <optional>
 

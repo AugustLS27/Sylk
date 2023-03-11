@@ -4,10 +4,9 @@
 
 #pragma once
 
+#include <sylk/vulkan/vulkan.hpp>
 #include <sylk/core/utils/rust_style_types.hpp>
 #include <sylk/vulkan/window/graphics_pipeline.hpp>
-
-#include <vulkan/vulkan.hpp>
 
 #include <vector>
 

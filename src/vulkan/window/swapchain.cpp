@@ -6,6 +6,7 @@
 #include <sylk/vulkan/utils/queue_family_indices.hpp>
 #include <sylk/vulkan/utils/result_handler.hpp>
 #include <sylk/core/utils/all.hpp>
+#include <sylk/vulkan/vulkan.hpp>
 
 #include <GLFW/glfw3.h>
 
@@ -27,7 +28,7 @@ namespace sylk {
     {}
 
     void Swapchain::create(vk::PhysicalDevice physical_device, GLFWwindow* window, vk::SurfaceKHR surface) {
-        log(TRACE, "Creating swapchain...");
+        log(ELogLvl::TRACE, "Creating swapchain...");
 
         physical_device_ = physical_device;
         window_ = window;
@@ -42,42 +43,50 @@ namespace sylk {
         create_command_buffer();
         create_synchronizers();
 
-        log(DEBUG, "Created swapchain");
+        log(ELogLvl::DEBUG, "Created swapchain");
     }
 
     void Swapchain::destroy() {
         device_.destroyCommandPool(command_pool_);
-        log(TRACE, "Destroyed command pool");
+        log(ELogLvl::TRACE, "Destroyed command pool");
 
         graphics_pipeline_.destroy();
 
         device_.destroyRenderPass(renderpass_);
-        log(TRACE, "Destroyed renderpass");
+        log(ELogLvl::TRACE, "Destroyed renderpass");
 
         for (u64 i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
             device_.destroySemaphore(semaphores_img_available_[i]);
             device_.destroySemaphore(semaphores_render_finished_[i]);
             device_.destroyFence(fences_in_flight_[i]);
         }
-        log(TRACE, "Destroyed synchronization objects");
+        log(ELogLvl::TRACE, "Destroyed synchronization objects");
 
         destroy_partial();
     }
 
     Swapchain::SupportDetails Swapchain::query_device_support_details(vk::PhysicalDevice device, vk::SurfaceKHR surface) const {
-        log(TRACE, "Querying swapchain support details...");
+        log(ELogLvl::TRACE, "Querying swapchain support details...");
 
         SupportDetails details;
 
-        details.surface_capabilities = device.getSurfaceCapabilitiesKHR(surface);
-        details.surface_formats = device.getSurfaceFormatsKHR(surface);
-        details.present_modes = device.getSurfacePresentModesKHR(surface);
+        const auto [cap_result, capabilities] = device.getSurfaceCapabilitiesKHR(surface);
+        handle_result(cap_result, "Failed to acquire surface capabilities");
+        details.surface_capabilities = capabilities;
+
+        const auto [format_result, formats] = device.getSurfaceFormatsKHR(surface);
+        handle_result(format_result, "Failed to acquire surface formats");
+        details.surface_formats = formats;
+
+        const auto [mode_result, modes] = device.getSurfacePresentModesKHR(surface);
+        handle_result(mode_result, "Failed to acquire surface present modes");
+        details.present_modes = modes;
 
         return details;
     }
 
     vk::SurfaceFormatKHR Swapchain::select_surface_format(const std::vector<vk::SurfaceFormatKHR>& available_formats) const {
-        log(TRACE, "Selecting swapchain surface format...");
+        log(ELogLvl::TRACE, "Selecting swapchain surface format...");
 
         for (const auto& format : available_formats) {
             if (format.format == vk::Format::eB8G8R8A8Srgb && format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
@@ -89,7 +98,7 @@ namespace sylk {
     }
 
     vk::PresentModeKHR Swapchain::select_present_mode(const std::vector<vk::PresentModeKHR>& available_modes) const {
-        log(TRACE, "Selecting swapchain present mode...");
+        log(ELogLvl::TRACE, "Selecting swapchain present mode...");
 
         for (const auto& mode : available_modes) {
             if (mode == vk::PresentModeKHR::eImmediate) {
@@ -101,7 +110,7 @@ namespace sylk {
     }
 
     vk::Extent2D Swapchain::select_extent_2d(const vk::SurfaceCapabilitiesKHR capabilities, GLFWwindow* window) const {
-        log(TRACE, "Selecting swapchain extent...");
+        log(ELogLvl::TRACE, "Selecting swapchain extent...");
 
         if (capabilities.currentExtent.width != U32_LIMIT) {
             return capabilities.currentExtent;
@@ -149,10 +158,12 @@ namespace sylk {
                     .setComponents(component_mappings)
                     .setSubresourceRange(subresource_range);
 
-            image_views_[i] = device_.createImageView(create_info);
+            const auto [result, view] = device_.createImageView(create_info);
+            handle_result(result, "Failed to create image view");
+            image_views_[i] = view;
         }
 
-        log(TRACE, "Created swapchain image views");
+        log(ELogLvl::TRACE, "Created swapchain image views");
     }
 
     void Swapchain::create_framebuffers() {
@@ -166,31 +177,47 @@ namespace sylk {
                     .setHeight(extent_.height)
                     .setLayers(1);
 
-            frame_buffers_[i] = device_.createFramebuffer(framebuffer_info);
+            const auto [result, buffer] = device_.createFramebuffer(framebuffer_info);
+            handle_result(result, "Failed to create framebuffer");
+            frame_buffers_[i] = buffer;
         }
 
-        log(TRACE, "Created framebuffers");
+        log(ELogLvl::TRACE, "Created framebuffers");
     }
 
     void Swapchain::create_synchronizers() {
 
         for (u64 i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
-            semaphores_img_available_[i] = device_.createSemaphore(vk::SemaphoreCreateInfo());
-            semaphores_render_finished_[i] = device_.createSemaphore(vk::SemaphoreCreateInfo());
-            fences_in_flight_[i] = device_.createFence(vk::FenceCreateInfo().setFlags(vk::FenceCreateFlagBits::eSignaled));
+            const auto [sema_result_a, sema_a] = device_.createSemaphore(vk::SemaphoreCreateInfo());
+            handle_result(sema_result_a, "Failed to create semaphore");
+
+            const auto [sema_result_b, sema_b] = device_.createSemaphore(vk::SemaphoreCreateInfo());
+            handle_result(sema_result_b, "Failed to create semaphore");
+
+            const auto [fence_result, fence] = device_.createFence(vk::FenceCreateInfo().setFlags(vk::FenceCreateFlagBits::eSignaled));
+            handle_result(fence_result, "Failed to create fence");
+
+            semaphores_img_available_[i] = sema_a;
+            semaphores_render_finished_[i] = sema_b;
+            fences_in_flight_[i] = fence;
         }
         
 
-        log(TRACE, "Created synchronizer objects");
+        log(ELogLvl::TRACE, "Created synchronizer objects");
     }
 
     void Swapchain::draw_next() {
-        handle_result(device_.waitForFences(fences_in_flight_[current_frame_], true, UINT64_MAX), "Vulkan Fence error");
-        device_.resetFences(fences_in_flight_[current_frame_]);
+        handle_result(device_.waitForFences(fences_in_flight_[current_frame_], true, UINT64_MAX), "Vulkan fence error");
 
         const auto [result, img_index] = device_.acquireNextImageKHR(swapchain_, UINT64_MAX, semaphores_img_available_[current_frame_]);
-        handle_result(result, "Image acquisition failed");
+        if (result == vk::Result::eErrorOutOfDateKHR) {
+            recreate();
+            return;
+        } else if (result != vk::Result::eSuccess && result != vk::Result::eSuboptimalKHR) {
+            handle_result(result, "Image acquisition failed");
+        }
 
+        device_.resetFences(fences_in_flight_[current_frame_]);
         command_buffers_[current_frame_].reset();
         record_command_buffer(command_buffers_[current_frame_], img_index);
 
@@ -208,7 +235,12 @@ namespace sylk {
                 .setSwapchains(swapchain_)
                 .setImageIndices(img_index);
 
-        handle_result(presentation_queue_.presentKHR(present_info), "Failed to present image");
+        vk::Result present_result = presentation_queue_.presentKHR(present_info);
+        if (present_result == vk::Result::eErrorOutOfDateKHR || present_result == vk::Result::eSuboptimalKHR) {
+            recreate();
+        } else {
+            handle_result(present_result, "Failed to present image");
+        }
 
         current_frame_ = ++current_frame_ % MAX_FRAMES_IN_FLIGHT;
     }
@@ -253,8 +285,11 @@ namespace sylk {
                 .setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
                 .setQueueFamilyIndex(graphics_queue_family_index_);
 
-        command_pool_ = device_.createCommandPool(pool_info);
-        log(TRACE, "Created command pool");
+        const auto [result, pool] = device_.createCommandPool(pool_info);
+        handle_result(result, "Failed to create command pool");
+        command_pool_ = pool;
+
+        log(ELogLvl::TRACE, "Created command pool");
     }
 
     void Swapchain::create_command_buffer() {
@@ -263,9 +298,11 @@ namespace sylk {
                 .setLevel(vk::CommandBufferLevel::ePrimary)
                 .setCommandBufferCount(cast<u32>(command_buffers_.size()));
 
-        command_buffers_ = device_.allocateCommandBuffers(buffer_alloc_info);
+        const auto [result, buffer] = device_.allocateCommandBuffers(buffer_alloc_info);
+        handle_result(result, "Failed to allocate command buffer");
+        command_buffers_ = buffer;
 
-        log(TRACE, "Created command buffer");
+        log(ELogLvl::TRACE, "Created command buffer");
     }
 
     void Swapchain::create_renderpass() {
@@ -298,9 +335,11 @@ namespace sylk {
                 .setSubpasses(subpass)
                 .setDependencies(subpass_dependency);
 
-        renderpass_ = device_.createRenderPass(render_pass_info);
+        const auto [result, renderpass] = device_.createRenderPass(render_pass_info);
+        handle_result(result, "Failed to create renderpass");
+        renderpass_ = renderpass;
 
-        log(TRACE, "Created render pass");
+        log(ELogLvl::TRACE, "Created render pass");
     }
 
     void Swapchain::set_queues(vk::Queue graphics, vk::Queue present) {
@@ -312,15 +351,15 @@ namespace sylk {
         for (auto framebuffer : frame_buffers_) {
             device_.destroyFramebuffer(framebuffer);
         }
-        log(TRACE, "Destroyed framebuffers");
+        log(ELogLvl::TRACE, "Destroyed framebuffers");
 
         for (auto view : image_views_) {
             device_.destroyImageView(view);
         }
-        log(TRACE, "Destroyed image views");
+        log(ELogLvl::TRACE, "Destroyed image views");
 
         device_.destroySwapchainKHR(swapchain_);
-        log(TRACE, "Destroyed swapchain");
+        log(ELogLvl::TRACE, "Destroyed swapchain");
     }
 
     void Swapchain::recreate() {
@@ -331,6 +370,8 @@ namespace sylk {
         setup_swapchain();
         create_image_views();
         create_framebuffers();
+
+        log(ELogLvl::TRACE, "Re-created swapchain");
     }
 
     void Swapchain::setup_swapchain() {
@@ -375,7 +416,12 @@ namespace sylk {
                 .setClipped(true)
                 .setOldSwapchain(nullptr);
 
-        swapchain_ = device_.createSwapchainKHR(create_info, nullptr);
-        images_ = device_.getSwapchainImagesKHR(swapchain_);
+        const auto [swapc_result, swapchain] = device_.createSwapchainKHR(create_info, nullptr);
+        handle_result(swapc_result, "Failed to create swapchain");
+        swapchain_ = swapchain;
+
+        const auto [img_result, images] = device_.getSwapchainImagesKHR(swapchain_);
+        handle_result(img_result, "Failed to acquire swapchain images");
+        images_ = images;
     }
 }

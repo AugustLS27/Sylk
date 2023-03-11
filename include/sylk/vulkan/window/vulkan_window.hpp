@@ -8,12 +8,11 @@
 #include <sylk/vulkan/utils/validation_layers.hpp>
 #include <sylk/vulkan/window/swapchain.hpp>
 #include <sylk/vulkan/window/graphics_pipeline.hpp>
+#include <sylk/vulkan/vulkan.hpp>
 
 #include <vector>
 #include <span>
 #include <optional>
-
-#include <vulkan/vulkan.hpp>
 
 struct GLFWwindow;
 

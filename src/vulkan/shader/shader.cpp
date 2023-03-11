@@ -4,6 +4,7 @@
 
 #include <sylk/vulkan/shader/shader.hpp>
 #include <sylk/core/utils/all.hpp>
+#include <sylk/vulkan/utils/result_handler.hpp>
 
 #include <fstream>
 
@@ -17,7 +18,7 @@ namespace sylk {
         std::ifstream file(filename, std::ios::ate | std::ios::binary);
 
         if (not file.is_open()) {
-            log(CRITICAL, "Failed to open shader file: {}", filename);
+            log(ELogLvl::CRITICAL, "Failed to open shader file: {}", filename);
         }
 
         u64 file_size = cast<u64>(file.tellg());
@@ -34,7 +35,9 @@ namespace sylk {
         const auto create_info = vk::ShaderModuleCreateInfo()
                 .setPCode(reinterpret_cast<const u32*>(shader_code_.data()))
                 .setCodeSize(shader_code_.size());
-        shader_module_ = device_.createShaderModule(create_info);
+        const auto [result, shader] = device_.createShaderModule(create_info);
+        handle_result(result, "Failed to create shader module");
+        shader_module_ = shader;
     }
 
     void Shader::destroy() {

@@ -80,7 +80,9 @@ namespace sylk {
                 .setAttachments(color_blend_attachment);
 
         const auto layout_info = vk::PipelineLayoutCreateInfo();
-        layout_ = device_.createPipelineLayout(layout_info);
+        const auto [layout_result, layout] = device_.createPipelineLayout(layout_info);
+        handle_result(layout_result, "Failed to create pipeline layout", ELogLvl::ERROR);
+        layout_ = layout;
 
         const auto pipeline_info = vk::GraphicsPipelineCreateInfo()
                 .setStages(shader_stages)
@@ -96,13 +98,13 @@ namespace sylk {
                 .setSubpass(0);
 
         auto [result, value] = device_.createGraphicsPipeline(nullptr, pipeline_info);
-        handle_result(result, "Failed to create graphics pipeline", true);
+        handle_result(result, "Failed to create graphics pipeline", ELogLvl::CRITICAL);
         pipeline_ = value;
 
         vertex_shader_.destroy();
         fragment_shader_.destroy();
 
-        log(DEBUG, "Created graphics pipeline");
+        log(ELogLvl::DEBUG, "Created graphics pipeline");
     }
 
     GraphicsPipeline::GraphicsPipeline(const vk::Device& device)
@@ -112,10 +114,10 @@ namespace sylk {
 
     void GraphicsPipeline::destroy() const {
         device_.destroyPipeline(pipeline_);
-        log(TRACE, "Destroyed graphics pipeline");
+        log(ELogLvl::TRACE, "Destroyed graphics pipeline");
 
         device_.destroyPipelineLayout(layout_);
-        log(TRACE, "Destroyed graphics pipeline layout");
+        log(ELogLvl::TRACE, "Destroyed graphics pipeline layout");
     }
 
     vk::Pipeline GraphicsPipeline::get() const {
