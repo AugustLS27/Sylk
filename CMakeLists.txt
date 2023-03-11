@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(sylk VERSION 0.0.2)
-
-add_compile_definitions(SYLK_VERSION="${CMAKE_PROJECT_VERSION}")
+project(sylk VERSION 0.0.3)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
@@ -45,17 +43,6 @@ endif()
 
 
 # sylk
-if(${CMAKE_BUILD_TYPE} STREQUAL Debug)
-    add_compile_definitions(SYLK_DEBUG)
-elseif(${CMAKE_BUILD_TYPE} STREQUAL Verbose)
-    add_compile_definitions(SYLK_VERBOSE)
-    add_compile_definitions(SYLK_DEBUG)
-else()
-    add_compile_definitions(SYLK_RELEASE)
-endif()
-
-add_compile_definitions(SYLK_NODISCARD=[[nodiscard]])
-
 add_executable(sylk
         libs/glad/glad.c
         libs/img/stb_image.cpp
@@ -85,3 +72,19 @@ target_link_libraries(sylk PRIVATE
         Vulkan::Vulkan
         glfw
         )
+
+if(${CMAKE_BUILD_TYPE} STREQUAL Debug)
+    target_compile_definitions(sylk PRIVATE SYLK_DEBUG)
+elseif(${CMAKE_BUILD_TYPE} STREQUAL Verbose)
+    target_compile_definitions(sylk PRIVATE SYLK_VERBOSE)
+    target_compile_definitions(sylk PRIVATE SYLK_DEBUG)
+else()
+    target_compile_definitions(sylk PRIVATE SYLK_RELEASE)
+endif()
+
+target_compile_definitions(sylk PRIVATE SYLK_NODISCARD=[[nodiscard]])
+target_compile_definitions(sylk PRIVATE SYLK_VERSION_STR="${CMAKE_PROJECT_VERSION}")
+target_compile_definitions(sylk PRIVATE SYLK_VERSION_MAJOR=${CMAKE_PROJECT_VERSION_MAJOR})
+target_compile_definitions(sylk PRIVATE SYLK_VERSION_MINOR=${CMAKE_PROJECT_VERSION_MINOR})
+target_compile_definitions(sylk PRIVATE SYLK_VERSION_PATCH=${CMAKE_PROJECT_VERSION_PATCH})
+

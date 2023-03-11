@@ -52,7 +52,7 @@ namespace sylk {
 
                 logger->set_pattern("%^%v%$");
                 logger->set_level(static_cast<spdlog::level::level_enum>(SYLK_LOG_LEVEL));
-                logger->log(static_cast<spdlog::level::level_enum>(ELogLvl::INFO), "--- Sylk v{}\n", SYLK_VERSION);
+                logger->log(static_cast<spdlog::level::level_enum>(ELogLvl::INFO), "--- Sylk v{}\n", SYLK_VERSION_STR);
 
                 logger->set_pattern("%^<%n>%$ %v");
             }

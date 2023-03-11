@@ -79,30 +79,31 @@ namespace sylk {
                           "Sylk will now shut down.");
         }
 
-        const vk::ApplicationInfo app_info = vk::ApplicationInfo()
-                .setPApplicationName("Sylk")
-                .setApplicationVersion(VK_MAKE_VERSION(1, 0, 0))
-                .setPEngineName("Sylk")
-                .setEngineVersion(VK_MAKE_VERSION(1, 0, 0))
-                .setApiVersion(VK_API_VERSION_1_3);
+        const vk::ApplicationInfo app_info = vk::ApplicationInfo {
+            .pApplicationName = settings_.title,
+            .applicationVersion = VK_MAKE_VERSION(1, 0, 0),
+            .pEngineName = "Sylk",
+            .engineVersion = VK_MAKE_VERSION(SYLK_VERSION_MAJOR, SYLK_VERSION_MINOR, SYLK_VERSION_PATCH),
+            .apiVersion = VK_API_VERSION_1_3,
+        };
 
         fetch_required_extensions();
         required_extensions_available();
 
-        vk::InstanceCreateInfo instance_create_info = vk::InstanceCreateInfo()
-                .setPApplicationInfo(&app_info)
-                .setPEnabledExtensionNames(required_extensions_)
+        vk::InstanceCreateInfo instance_info = vk::InstanceCreateInfo {
+                .pApplicationInfo = &app_info,
 #ifdef SYLK_DEBUG
-                .setEnabledLayerCount(validation_layers_.enabled_layer_count())
-                .setPEnabledLayerNames(validation_layers_.enabled_layer_container())
+                .enabledLayerCount = validation_layers_.enabled_layer_count(),
+                .ppEnabledLayerNames = validation_layers_.enabled_layer_container().data(),
 #else
-                .setEnabledLayerCount(0)
+                .enabledLayerCount = 0,
 #endif
-                ;
+                .ppEnabledExtensionNames = required_extensions_.data(),
+        };
 
-        
-        handle_result(vk::createInstance(&instance_create_info, nullptr, &instance_),
-                      "Failed to create Vulkan instance", ELogLvl::CRITICAL);
+        const auto [result, instance] = vk::createInstance(instance_info);
+        handle_result(result, "Failed to create Vulkan instance", ELogLvl::CRITICAL);
+        instance_ = instance;
 
         log(ELogLvl::DEBUG, "Created Vulkan instance");
 
@@ -214,29 +215,29 @@ namespace sylk {
         std::vector<vk::DeviceQueueCreateInfo> queue_create_infos;
         const std::set<u32> unique_queue_families {queue_indices.graphics.value(), queue_indices.presentation.value()};
         for (const auto family : unique_queue_families) {
-            const auto dev_queue_create_info = vk::DeviceQueueCreateInfo()
-                    .setQueueFamilyIndex(family)
-                    .setQueueCount(1)
-                    .setPQueuePriorities(&queue_prio);
+            const auto dev_queue_create_info = vk::DeviceQueueCreateInfo {
+                .queueFamilyIndex = family,
+            }
+            .setQueuePriorities(queue_prio);
+
             queue_create_infos.push_back(dev_queue_create_info);
         }
 
         const auto dev_features = vk::PhysicalDeviceFeatures();
 
-        const auto dev_create_info = vk::DeviceCreateInfo()
-                .setPQueueCreateInfos(queue_create_infos.data())
-                .setQueueCreateInfoCount(cast<u32>(queue_create_infos.size()))
-                .setPEnabledFeatures(&dev_features)
-                .setEnabledExtensionCount(cast<u32>(required_device_extensions_.size()))
-                .setPEnabledExtensionNames(required_device_extensions_)
+        const auto dev_create_info = vk::DeviceCreateInfo {
 #ifdef SYLK_DEBUG
-                // For backward compatibility with older VK implementations
-                .setEnabledLayerCount(validation_layers_.enabled_layer_count())
-                .setPEnabledLayerNames(validation_layers_.enabled_layer_container())
+                .enabledLayerCount = validation_layers_.enabled_layer_count(),
+                .ppEnabledLayerNames = validation_layers_.enabled_layer_container().data(),
 #else
-                .setEnabledLayerCount(0)
+                .enabledLayerCount = 0,
 #endif
-                ;
+
+                .enabledExtensionCount = cast<u32>(required_device_extensions_.size()),
+                .ppEnabledExtensionNames = required_device_extensions_.data(),
+                .pEnabledFeatures = &dev_features,
+        }
+        .setQueueCreateInfos(queue_create_infos);
 
         const auto [result, dev] = physical_device_.createDevice(dev_create_info);
         handle_result(result, "Failed to create logical Vulkan device", ELogLvl::CRITICAL);
