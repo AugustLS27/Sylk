@@ -5,11 +5,9 @@
 #ifndef SYLK_VULKAN_HPP
 #define SYLK_VULKAN_HPP
 
-template<typename... Args>
-void discard(Args... args) {}
-
+#define VULKAN_HPP_NO_CONSTRUCTORS
 #define VULKAN_HPP_NO_EXCEPTIONS
-#define VULKAN_HPP_ASSERT_ON_RESULT discard
+#define VULKAN_HPP_ASSERT_ON_RESULT
 #include <vulkan/vulkan.hpp>
 
 #endif

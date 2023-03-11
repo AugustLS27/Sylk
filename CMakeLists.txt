@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(sylk VERSION 0.0.1)
+project(sylk VERSION 0.0.2)
 
 add_compile_definitions(SYLK_VERSION="${CMAKE_PROJECT_VERSION}")
 
@@ -65,10 +65,13 @@ add_executable(sylk
         src/vulkan/utils/result_handler.cpp
         src/vulkan/utils/validation_layers.cpp
         src/vulkan/utils/queue_family_indices.cpp
+
         src/vulkan/window/vulkan_window.cpp
         src/vulkan/window/swapchain.cpp
         src/vulkan/window/graphics_pipeline.cpp
+
         src/vulkan/shader/shader.cpp
+        src/vulkan/shader/vertex.cpp
         )
 
 target_include_directories(sylk PRIVATE

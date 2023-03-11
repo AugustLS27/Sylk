@@ -120,7 +120,7 @@ namespace sylk {
         i32 window_width, window_height;
         glfwGetFramebufferSize(window, &window_width, &window_height);
 
-        vk::Extent2D actual_extent{
+        vk::Extent2D actual_extent {
                 cast<u32>(window_width),
                 cast<u32>(window_height)
         };
@@ -138,26 +138,29 @@ namespace sylk {
     void Swapchain::create_image_views() {
         image_views_.resize(images_.size());
 
-        const auto component_mappings = vk::ComponentMapping()
-                .setR(vk::ComponentSwizzle::eIdentity)
-                .setG(vk::ComponentSwizzle::eIdentity)
-                .setB(vk::ComponentSwizzle::eIdentity)
-                .setA(vk::ComponentSwizzle::eIdentity);
+        const auto component_mappings = vk::ComponentMapping {
+            .r = vk::ComponentSwizzle::eIdentity,
+            .g = vk::ComponentSwizzle::eIdentity,
+            .b = vk::ComponentSwizzle::eIdentity,
+            .a = vk::ComponentSwizzle::eIdentity
+        };
 
-        const auto subresource_range = vk::ImageSubresourceRange()
-                .setAspectMask(vk::ImageAspectFlagBits::eColor)
-                .setBaseMipLevel(0)
-                .setLevelCount(1)
-                .setBaseArrayLayer(0)
-                .setLayerCount(1);
+        const auto subresource_range = vk::ImageSubresourceRange {
+            .aspectMask = vk::ImageAspectFlagBits::eColor,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        };
 
         for (u64 i = 0; i < images_.size(); ++i) {
-            const auto create_info = vk::ImageViewCreateInfo()
-                    .setImage(images_[i])
-                    .setViewType(vk::ImageViewType::e2D)
-                    .setFormat(format_)
-                    .setComponents(component_mappings)
-                    .setSubresourceRange(subresource_range);
+            const auto create_info = vk::ImageViewCreateInfo {
+                .image = images_[i],
+                .viewType = vk::ImageViewType::e2D,
+                .format = format_,
+                .components = component_mappings,
+                .subresourceRange = subresource_range,
+            };
 
             const auto [result, view] = device_.createImageView(create_info);
             handle_result(result, "Failed to create image view");
@@ -171,12 +174,13 @@ namespace sylk {
         frame_buffers_.resize(image_views_.size());
 
         for (u64 i = 0; i < image_views_.size(); ++i) {
-            const auto framebuffer_info = vk::FramebufferCreateInfo()
-                    .setRenderPass(renderpass_)
-                    .setAttachments(image_views_[i])
-                    .setWidth(extent_.width)
-                    .setHeight(extent_.height)
-                    .setLayers(1);
+            const auto framebuffer_info = vk::FramebufferCreateInfo {
+                .renderPass = renderpass_,
+                .width = extent_.width,
+                .height = extent_.height,
+                .layers = 1,
+            }
+            .setAttachments(image_views_[i]);
 
             const auto [result, buffer] = device_.createFramebuffer(framebuffer_info);
             handle_result(result, "Failed to create framebuffer");
@@ -194,7 +198,7 @@ namespace sylk {
             const auto [sema_result_b, sema_b] = device_.createSemaphore(vk::SemaphoreCreateInfo());
             handle_result(sema_result_b, "Failed to create semaphore");
 
-            const auto [fence_result, fence] = device_.createFence(vk::FenceCreateInfo().setFlags(vk::FenceCreateFlagBits::eSignaled));
+            const auto [fence_result, fence] = device_.createFence(vk::FenceCreateInfo{ .flags = vk::FenceCreateFlagBits::eSignaled });
             handle_result(fence_result, "Failed to create fence");
 
             semaphores_img_available_[i] = sema_a;
@@ -249,30 +253,29 @@ namespace sylk {
         const auto buffer_begin_info = vk::CommandBufferBeginInfo();
         handle_result(buffer.begin(buffer_begin_info), "Failed to start recording command buffer");
 
-        const auto render_area = vk::Rect2D().setExtent(extent_);
-        const std::array clear_value = {
-                0.0f, 0.0f, 0.0f, 1.0f
+        const auto clear_color = vk::ClearValue {
+            .color = { std::array {
+                    0.0f, 0.0f, 0.0f, 1.0f
+            }}
         };
-        const auto clear_color = vk::ClearValue(clear_value);
+        const auto renderpass_begin_info = vk::RenderPassBeginInfo {
+            .renderPass = renderpass_,
+            .framebuffer = frame_buffers_[image_index],
+            .renderArea = vk::Rect2D {.extent = extent_},
 
-        const auto renderpass_begin_info = vk::RenderPassBeginInfo()
-                .setRenderPass(renderpass_)
-                .setFramebuffer(frame_buffers_[image_index])
-                .setRenderArea(render_area)
-                .setClearValues(clear_color);
+        }
+        .setClearValues(clear_color);
 
-        const auto pipeline = graphics_pipeline_.get_handle();
         buffer.beginRenderPass(renderpass_begin_info, vk::SubpassContents::eInline);
-        buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
+        buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, graphics_pipeline_.get_handle());
 
-        const auto viewport = vk::Viewport()
-                .setHeight(cast<f32>(extent_.height))
-                .setWidth(cast<f32>(extent_.width))
-                .setMaxDepth(1.0f);
-        buffer.setViewport(0, viewport);
+        buffer.setViewport(0, vk::Viewport {
+                .width = cast<f32>(extent_.width),
+                .height = cast<f32>(extent_.height),
+                .maxDepth = 1.0f,
+        });
 
-        const auto scissor = vk::Rect2D().setExtent(extent_);
-        buffer.setScissor(0, scissor);
+        buffer.setScissor(0, vk::Rect2D{.extent = extent_});
 
         buffer.draw(3, 1, 0, 0);
 
@@ -281,9 +284,10 @@ namespace sylk {
     }
 
     void Swapchain::create_command_pool() {
-        const auto pool_info = vk::CommandPoolCreateInfo()
-                .setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
-                .setQueueFamilyIndex(graphics_queue_family_index_);
+        const auto pool_info = vk::CommandPoolCreateInfo {
+            .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+            .queueFamilyIndex = graphics_queue_family_index_,
+        };
 
         const auto [result, pool] = device_.createCommandPool(pool_info);
         handle_result(result, "Failed to create command pool");
@@ -293,10 +297,11 @@ namespace sylk {
     }
 
     void Swapchain::create_command_buffer() {
-        const auto buffer_alloc_info = vk::CommandBufferAllocateInfo()
-                .setCommandPool(command_pool_)
-                .setLevel(vk::CommandBufferLevel::ePrimary)
-                .setCommandBufferCount(cast<u32>(command_buffers_.size()));
+        const auto buffer_alloc_info = vk::CommandBufferAllocateInfo {
+                .commandPool = command_pool_,
+                .level = vk::CommandBufferLevel::ePrimary,
+                .commandBufferCount = cast<u32>(command_buffers_.size()),
+        };
 
         const auto [result, buffer] = device_.allocateCommandBuffers(buffer_alloc_info);
         handle_result(result, "Failed to allocate command buffer");
@@ -306,29 +311,35 @@ namespace sylk {
     }
 
     void Swapchain::create_renderpass() {
-        const auto color_attachment = vk::AttachmentDescription()
-                .setFormat(format_)
-                .setSamples(vk::SampleCountFlagBits::e1)
-                .setLoadOp(vk::AttachmentLoadOp::eClear)
-                .setStoreOp(vk::AttachmentStoreOp::eStore)
-                .setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
-                .setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
-                .setInitialLayout(vk::ImageLayout::eUndefined)
-                .setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+        const auto color_attachment = vk::AttachmentDescription {
+            .format = format_,
+            .samples = vk::SampleCountFlagBits::e1,
+            .loadOp = vk::AttachmentLoadOp::eClear,
+            .storeOp = vk::AttachmentStoreOp::eStore,
+            .stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
+            .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
+            .initialLayout = vk::ImageLayout::eUndefined,
+            .finalLayout = vk::ImageLayout::ePresentSrcKHR,
+        };
 
-        const auto color_attachment_ref = vk::AttachmentReference(0, vk::ImageLayout::eColorAttachmentOptimal);
+        const auto color_attachment_ref = vk::AttachmentReference {
+            .attachment = 0,
+            .layout = vk::ImageLayout::eColorAttachmentOptimal,
+        };
 
-        const auto subpass = vk::SubpassDescription()
-                .setPipelineBindPoint(vk::PipelineBindPoint::eGraphics)
-                .setColorAttachments(color_attachment_ref);
+        const auto subpass = vk::SubpassDescription {
+            .pipelineBindPoint = vk::PipelineBindPoint::eGraphics,
+        }
+        .setColorAttachments(color_attachment_ref);
 
-        const auto subpass_dependency = vk::SubpassDependency()
-                .setSrcSubpass(VK_SUBPASS_EXTERNAL)
-                .setDstSubpass(0)
-                .setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
-                .setSrcAccessMask(vk::AccessFlagBits::eNone)
-                .setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
-                .setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+        const auto subpass_dependency = vk::SubpassDependency {
+            .srcSubpass = VK_SUBPASS_EXTERNAL,
+            .dstSubpass = 0,
+            .srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput,
+            .dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput,
+            .srcAccessMask = vk::AccessFlagBits::eNone,
+            .dstAccessMask =vk::AccessFlagBits::eColorAttachmentWrite,
+        };
 
         const auto render_pass_info = vk::RenderPassCreateInfo()
                 .setAttachments(color_attachment)
@@ -375,23 +386,11 @@ namespace sylk {
     }
 
     void Swapchain::setup_swapchain() {
-        const auto queue_family_indices = QueueFamilyIndices::find(physical_device_, surface_);
-        graphics_queue_family_index_ = queue_family_indices.graphics.value();
-        std::vector queue_families {graphics_queue_family_index_, queue_family_indices.presentation.value()};
-        const bool queues_equal = queue_family_indices.graphics == queue_family_indices.presentation;
-
-        // exclusive mode does not require specified queue families
-        if (!queues_equal) {
-            queue_families.clear();
-        }
-        const auto sharing_mode = (queues_equal ? vk::SharingMode::eExclusive : vk::SharingMode::eConcurrent);
-
         const auto support_details = query_device_support_details(physical_device_, surface_);
         const auto surface_format = select_surface_format(support_details.surface_formats);
-        const auto present_mode = select_present_mode(support_details.present_modes);
 
-        extent_ = select_extent_2d(support_details.surface_capabilities, window_);
         format_ = surface_format.format;
+        extent_ = select_extent_2d(support_details.surface_capabilities, window_);
 
         const auto max_image_count = support_details.surface_capabilities.maxImageCount;
         const auto min_image_count = support_details.surface_capabilities.minImageCount + 1;
@@ -400,21 +399,32 @@ namespace sylk {
         const auto swapchain_img_count = (has_max_images && min_image_count > max_image_count ?
                                     max_image_count : min_image_count);
 
-        auto create_info = vk::SwapchainCreateInfoKHR()
-                .setSurface(surface_)
-                .setMinImageCount(swapchain_img_count)
-                .setImageFormat(format_)
-                .setImageColorSpace(surface_format.colorSpace)
-                .setImageExtent(extent_)
-                .setImageArrayLayers(1)
-                .setImageUsage(vk::ImageUsageFlagBits::eColorAttachment)
-                .setImageSharingMode(sharing_mode)
-                .setQueueFamilyIndices(queue_families)
-                .setPreTransform(support_details.surface_capabilities.currentTransform)
-                .setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)
-                .setPresentMode(present_mode)
-                .setClipped(true)
-                .setOldSwapchain(nullptr);
+        const auto queue_indices = QueueFamilyIndices::find(physical_device_, surface_);
+        graphics_queue_family_index_ = queue_indices.graphics.value();
+        std::vector active_queues {graphics_queue_family_index_, queue_indices.presentation.value()};
+        const bool queues_equal = queue_indices.graphics == queue_indices.presentation;
+
+        // exclusive mode does not require specified queue families
+        if (!queues_equal) {
+            active_queues.clear();
+        }
+
+        auto create_info = vk::SwapchainCreateInfoKHR {
+            .surface = surface_,
+            .minImageCount = swapchain_img_count,
+            .imageFormat = format_,
+            .imageColorSpace = surface_format.colorSpace,
+            .imageExtent = extent_,
+            .imageArrayLayers = 1,
+            .imageUsage = vk::ImageUsageFlagBits::eColorAttachment,
+            .imageSharingMode = (queues_equal ? vk::SharingMode::eExclusive : vk::SharingMode::eConcurrent),
+            .preTransform = support_details.surface_capabilities.currentTransform,
+            .compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque,
+            .presentMode = select_present_mode(support_details.present_modes),
+            .clipped = true,
+            .oldSwapchain = nullptr,
+        }
+        .setQueueFamilyIndices(active_queues);
 
         const auto [swapc_result, swapchain] = device_.createSwapchainKHR(create_info, nullptr);
         handle_result(swapc_result, "Failed to create swapchain");
