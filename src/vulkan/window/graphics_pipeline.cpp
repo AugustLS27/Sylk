@@ -73,7 +73,7 @@ namespace sylk {
 
         const auto multisampling_info = vk::PipelineMultisampleStateCreateInfo {
             .rasterizationSamples = vk::SampleCountFlagBits::e1,
-            .sampleShadingEnable  = true,
+            .sampleShadingEnable  = false,
         };
 
         const auto color_blend_attachment = vk::PipelineColorBlendAttachmentState {
@@ -88,31 +88,32 @@ namespace sylk {
                                         | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA,
         };
 
-        const auto color_blend_info = vk::PipelineColorBlendStateCreateInfo()
-                .setLogicOpEnable(false)
-                .setAttachments(color_blend_attachment);
+        const auto color_blend_info = vk::PipelineColorBlendStateCreateInfo {
+            .logicOpEnable = false,
+        }
+        .setAttachments(color_blend_attachment);
 
         const auto layout_info = vk::PipelineLayoutCreateInfo();
         const auto [layout_result, layout] = device_.createPipelineLayout(layout_info);
         handle_result(layout_result, "Failed to create pipeline layout", ELogLvl::ERROR);
         layout_ = layout;
 
-        const auto pipeline_info = vk::GraphicsPipelineCreateInfo()
-                .setStages(shader_stages)
-                .setPVertexInputState(&vertex_input_state_info)
-                .setPInputAssemblyState(&input_assembly_state_info)
-                .setPViewportState(&viewport_state_info)
-                .setPRasterizationState(&rasterizer_info)
-                .setPMultisampleState(&multisampling_info)
-                .setPColorBlendState(&color_blend_info)
-                .setPDynamicState(&dynamic_state_info)
-                .setLayout(layout_)
-                .setRenderPass(renderpass)
-                .setSubpass(0);
+        const auto pipeline_info = vk::GraphicsPipelineCreateInfo {
+            .pVertexInputState = &vertex_input_state_info,
+            .pInputAssemblyState = &input_assembly_state_info,
+            .pViewportState = &viewport_state_info,
+            .pRasterizationState = &rasterizer_info,
+            .pColorBlendState = &color_blend_info,
+            .pDynamicState = &dynamic_state_info,
+            .layout = layout_,
+            .renderPass = renderpass,
+            .subpass = 0,
+        }
+        .setStages(shader_stages);
 
-        const auto [result, value] = device_.createGraphicsPipeline(nullptr, pipeline_info);
+        const auto [result, pipeline] = device_.createGraphicsPipeline(nullptr, pipeline_info);
         handle_result(result, "Failed to create graphics pipeline", ELogLvl::CRITICAL);
-        pipeline_ = value;
+        pipeline_ = pipeline;
 
         vertex_shader_.destroy();
         fragment_shader_.destroy();
