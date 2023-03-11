@@ -27,7 +27,7 @@ namespace sylk {
             , current_frame_(0)
     {}
 
-    void Swapchain::create(vk::PhysicalDevice physical_device, GLFWwindow* window, vk::SurfaceKHR surface) {
+    void Swapchain::create(const vk::PhysicalDevice physical_device, GLFWwindow* window, const vk::SurfaceKHR surface) {
         log(ELogLvl::TRACE, "Creating swapchain...");
 
         physical_device_ = physical_device;
@@ -65,7 +65,8 @@ namespace sylk {
         destroy_partial();
     }
 
-    Swapchain::SupportDetails Swapchain::query_device_support_details(vk::PhysicalDevice device, vk::SurfaceKHR surface) const {
+    auto Swapchain::query_device_support_details(const vk::PhysicalDevice device, const vk::SurfaceKHR surface) const
+    -> Swapchain::SupportDetails {
         log(ELogLvl::TRACE, "Querying swapchain support details...");
 
         SupportDetails details;
@@ -85,7 +86,7 @@ namespace sylk {
         return details;
     }
 
-    vk::SurfaceFormatKHR Swapchain::select_surface_format(const std::vector<vk::SurfaceFormatKHR>& available_formats) const {
+    auto Swapchain::select_surface_format(const std::vector<vk::SurfaceFormatKHR>& available_formats) const -> vk::SurfaceFormatKHR {
         log(ELogLvl::TRACE, "Selecting swapchain surface format...");
 
         for (const auto& format : available_formats) {
@@ -97,7 +98,7 @@ namespace sylk {
         return available_formats.front();
     }
 
-    vk::PresentModeKHR Swapchain::select_present_mode(const std::vector<vk::PresentModeKHR>& available_modes) const {
+    auto Swapchain::select_present_mode(const std::vector<vk::PresentModeKHR>& available_modes) const -> vk::PresentModeKHR {
         log(ELogLvl::TRACE, "Selecting swapchain present mode...");
 
         for (const auto& mode : available_modes) {
@@ -109,7 +110,7 @@ namespace sylk {
         return vk::PresentModeKHR::eFifo;
     }
 
-    vk::Extent2D Swapchain::select_extent_2d(const vk::SurfaceCapabilitiesKHR capabilities, GLFWwindow* window) const {
+    auto Swapchain::select_extent_2d(const vk::SurfaceCapabilitiesKHR capabilities, GLFWwindow* window) const -> vk::Extent2D {
         log(ELogLvl::TRACE, "Selecting swapchain extent...");
 
         if (capabilities.currentExtent.width != U32_LIMIT) {
@@ -186,7 +187,6 @@ namespace sylk {
     }
 
     void Swapchain::create_synchronizers() {
-
         for (u64 i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
             const auto [sema_result_a, sema_a] = device_.createSemaphore(vk::SemaphoreCreateInfo());
             handle_result(sema_result_a, "Failed to create semaphore");
@@ -201,7 +201,6 @@ namespace sylk {
             semaphores_render_finished_[i] = sema_b;
             fences_in_flight_[i] = fence;
         }
-        
 
         log(ELogLvl::TRACE, "Created synchronizer objects");
     }
@@ -228,7 +227,8 @@ namespace sylk {
                 .setSignalSemaphores(semaphores_render_finished_[current_frame_])
                 .setCommandBuffers(command_buffers_[current_frame_]);
 
-        graphics_queue_.submit(submit_info, fences_in_flight_[current_frame_]);
+        handle_result(graphics_queue_.submit(submit_info, fences_in_flight_[current_frame_]),
+                      "Failed to submit to graphics queue");
 
         const auto present_info = vk::PresentInfoKHR()
                 .setWaitSemaphores(semaphores_render_finished_[current_frame_])
@@ -247,7 +247,7 @@ namespace sylk {
 
     void Swapchain::record_command_buffer(const vk::CommandBuffer buffer, const u32 image_index) {
         const auto buffer_begin_info = vk::CommandBufferBeginInfo();
-        buffer.begin(buffer_begin_info);
+        handle_result(buffer.begin(buffer_begin_info), "Failed to start recording command buffer");
 
         const auto render_area = vk::Rect2D().setExtent(extent_);
         const std::array clear_value = {
@@ -261,7 +261,7 @@ namespace sylk {
                 .setRenderArea(render_area)
                 .setClearValues(clear_color);
 
-        const auto pipeline = graphics_pipeline_.get();
+        const auto pipeline = graphics_pipeline_.get_handle();
         buffer.beginRenderPass(renderpass_begin_info, vk::SubpassContents::eInline);
         buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
 
@@ -277,7 +277,7 @@ namespace sylk {
         buffer.draw(3, 1, 0, 0);
 
         buffer.endRenderPass();
-        buffer.end();
+        handle_result(buffer.end(), "Failed to finish recording command buffer");
     }
 
     void Swapchain::create_command_pool() {
@@ -342,7 +342,7 @@ namespace sylk {
         log(ELogLvl::TRACE, "Created render pass");
     }
 
-    void Swapchain::set_queues(vk::Queue graphics, vk::Queue present) {
+    void Swapchain::set_queues(const vk::Queue graphics, const vk::Queue present) {
         graphics_queue_ = graphics;
         presentation_queue_ = present;
     }
@@ -363,7 +363,7 @@ namespace sylk {
     }
 
     void Swapchain::recreate() {
-        device_.waitIdle();
+        handle_result(device_.waitIdle(), "Device error");
 
         destroy_partial();
 
@@ -397,7 +397,7 @@ namespace sylk {
         const auto min_image_count = support_details.surface_capabilities.minImageCount + 1;
         const bool has_max_images = max_image_count > 0;
 
-        auto swapchain_img_count = (has_max_images && min_image_count > max_image_count ?
+        const auto swapchain_img_count = (has_max_images && min_image_count > max_image_count ?
                                     max_image_count : min_image_count);
 
         auto create_info = vk::SwapchainCreateInfoKHR()

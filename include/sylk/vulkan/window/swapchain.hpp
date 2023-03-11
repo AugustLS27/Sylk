@@ -30,7 +30,7 @@ namespace sylk {
 
         void draw_next();
 
-        SupportDetails query_device_support_details(vk::PhysicalDevice device, vk::SurfaceKHR surface) const;
+        SYLK_NODISCARD auto query_device_support_details(vk::PhysicalDevice device, vk::SurfaceKHR surface) const -> SupportDetails ;
         void set_queues(vk::Queue graphics, vk::Queue present);
 
     private:

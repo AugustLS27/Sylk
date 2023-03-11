@@ -6,7 +6,7 @@
 #include <sylk/vulkan/utils/result_handler.hpp>
 #include <sylk/core/utils/log.hpp>
 
-auto sylk::QueueFamilyIndices::find(vk::PhysicalDevice device, vk::SurfaceKHR surface) -> sylk::QueueFamilyIndices {
+auto sylk::QueueFamilyIndices::find(const vk::PhysicalDevice device, const vk::SurfaceKHR surface) -> sylk::QueueFamilyIndices {
     log(ELogLvl::TRACE, "Querying available device queue families...");
 
     QueueFamilyIndices indices;

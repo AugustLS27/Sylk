@@ -9,7 +9,7 @@
 constexpr const char* DEFAULT_SHADER_ENTRY_NAME = "main";
 
 namespace sylk {
-    void GraphicsPipeline::create(vk::Extent2D extent, vk::RenderPass renderpass) {
+    void GraphicsPipeline::create(const vk::Extent2D extent, const vk::RenderPass renderpass) {
         vertex_shader_.create("../../shaders/vk/spv/vert.spv");
         fragment_shader_.create("../../shaders/vk/spv/frag.spv");
 
@@ -23,12 +23,12 @@ namespace sylk {
                 .setPName(DEFAULT_SHADER_ENTRY_NAME)
                 .setStage(vk::ShaderStageFlagBits::eFragment);
 
-        std::array shader_stages = {
+        const std::array shader_stages = {
                 vert_stage_info,
                 frag_stage_info,
         };
 
-        std::vector<vk::DynamicState> dynamic_states = {
+        const std::vector<vk::DynamicState> dynamic_states = {
                 vk::DynamicState::eViewport,
                 vk::DynamicState::eScissor,
         };
@@ -97,7 +97,7 @@ namespace sylk {
                 .setRenderPass(renderpass)
                 .setSubpass(0);
 
-        auto [result, value] = device_.createGraphicsPipeline(nullptr, pipeline_info);
+        const auto [result, value] = device_.createGraphicsPipeline(nullptr, pipeline_info);
         handle_result(result, "Failed to create graphics pipeline", ELogLvl::CRITICAL);
         pipeline_ = value;
 
@@ -120,7 +120,7 @@ namespace sylk {
         log(ELogLvl::TRACE, "Destroyed graphics pipeline layout");
     }
 
-    vk::Pipeline GraphicsPipeline::get() const {
+    auto GraphicsPipeline::get_handle() const -> vk::Pipeline {
         return pipeline_;
     }
 }

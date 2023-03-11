@@ -18,7 +18,6 @@ namespace sylk {
     VulkanWindow::VulkanWindow(const Settings settings)
         : validation_layers_(instance_)
         , settings_(settings)
-        , required_extensions_({})
         , swapchain_(device_)
         {
         create_window();
@@ -60,7 +59,7 @@ namespace sylk {
         swapchain_.draw_next();
     }
 
-    std::span<const char*> VulkanWindow::fetch_required_extensions(bool force_update) {
+    std::span<const char*> VulkanWindow::fetch_required_extensions(const bool force_update) {
         log(ELogLvl::TRACE, "Querying available Vulkan extensions...");
 
         if (required_extensions_.empty() || force_update) {
@@ -82,9 +81,9 @@ namespace sylk {
 
         const vk::ApplicationInfo app_info = vk::ApplicationInfo()
                 .setPApplicationName("Sylk")
-                .setApplicationVersion(VK_MAKE_VERSION(0, 1, 0))
-                .setPEngineName("None")
-                .setEngineVersion(VK_MAKE_VERSION(0, 1, 0))
+                .setApplicationVersion(VK_MAKE_VERSION(1, 0, 0))
+                .setPEngineName("Sylk")
+                .setEngineVersion(VK_MAKE_VERSION(1, 0, 0))
                 .setApiVersion(VK_API_VERSION_1_3);
 
         fetch_required_extensions();
@@ -109,7 +108,7 @@ namespace sylk {
 
     }
 
-    bool VulkanWindow::required_extensions_available() {
+    auto VulkanWindow::required_extensions_available() -> bool {
         const auto [result, ext_props] = vk::enumerateInstanceExtensionProperties();
         handle_result(result, "Failed to enumerate instance extension properties");
 
@@ -160,6 +159,8 @@ namespace sylk {
 
         std::vector<std::pair<vk::PhysicalDevice, i16>> eligible_devices;
 
+        // to later be expanded with more intricate functionality
+        // list of devices should also be stored to allow the user to switch manually
         for (const auto dev : physical_devices) {
             log(ELogLvl::TRACE, "  -- Found device: {}", dev.getProperties().deviceName);
             const auto device_type = dev.getProperties().deviceType;
@@ -194,12 +195,12 @@ namespace sylk {
         log(ELogLvl::INFO, "Selected device: {}", physical_device_.getProperties().deviceName);
     }
 
-    bool VulkanWindow::device_is_suitable(vk::PhysicalDevice device) const {
+    auto VulkanWindow::device_is_suitable(const vk::PhysicalDevice device) const -> bool {
         log(ELogLvl::TRACE, "Verifying device suitability...");
 
-        Swapchain::SupportDetails swapchain_support = swapchain_.query_device_support_details(device, surface_);
-        bool swapchain_supported = !swapchain_support.surface_formats.empty()
-                                && !swapchain_support.present_modes.empty();
+        const Swapchain::SupportDetails swapchain_support = swapchain_.query_device_support_details(device, surface_);
+        const bool swapchain_supported = !swapchain_support.surface_formats.empty()
+                                        && !swapchain_support.present_modes.empty();
 
         return QueueFamilyIndices::find(device, surface_).has_required()
                && device_supports_required_extensions(device)
@@ -209,9 +210,9 @@ namespace sylk {
     void VulkanWindow::create_logical_device() {
         const auto queue_indices = QueueFamilyIndices::find(physical_device_, surface_);
 
-        f32 queue_prio = 1.f;
+        const f32 queue_prio = 1.f;
         std::vector<vk::DeviceQueueCreateInfo> queue_create_infos;
-        std::set<u32> unique_queue_families {queue_indices.graphics.value(), queue_indices.presentation.value()};
+        const std::set<u32> unique_queue_families {queue_indices.graphics.value(), queue_indices.presentation.value()};
         for (const auto family : unique_queue_families) {
             const auto dev_queue_create_info = vk::DeviceQueueCreateInfo()
                     .setQueueFamilyIndex(family)
@@ -259,7 +260,7 @@ namespace sylk {
         log(ELogLvl::TRACE, "Created window surface");
     }
 
-    bool VulkanWindow::device_supports_required_extensions(vk::PhysicalDevice device) const {
+    auto VulkanWindow::device_supports_required_extensions(const vk::PhysicalDevice device) const -> bool {
         log(ELogLvl::TRACE, "Querying supported device extensions...");
 
         const auto [result, dev_ext_props] = device.enumerateDeviceExtensionProperties();

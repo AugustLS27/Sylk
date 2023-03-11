@@ -18,7 +18,7 @@ namespace vk {
 namespace sylk {
     class ValidationLayers {
     public:
-        static constexpr bool enabled() {
+        static constexpr auto enabled() -> bool {
 #ifdef SYLK_DEBUG
             return true;
 #else
@@ -28,10 +28,10 @@ namespace sylk {
 
         explicit ValidationLayers(vk::Instance& instance);
 
-        bool supports_required_layers();
+        auto supports_required_layers() -> bool;
 
-        [[nodiscard]] u32 enabled_layer_count();
-        [[nodiscard]] const std::vector<const char*>& enabled_layer_container();
+        SYLK_NODISCARD auto enabled_layer_count() -> u32;
+        SYLK_NODISCARD auto enabled_layer_container() -> const std::vector<const char*>&;
 
     private:
         void fetch_available_validation_layers();

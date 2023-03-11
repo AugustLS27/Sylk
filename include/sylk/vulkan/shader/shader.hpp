@@ -17,7 +17,7 @@ namespace sylk {
         void create(const char* filename);
         void destroy();
 
-        vk::ShaderModule get_module() const;
+        auto get_module() const -> vk::ShaderModule;
 
     private:
         void create_shader_module();

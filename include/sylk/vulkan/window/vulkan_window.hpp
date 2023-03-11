@@ -16,9 +16,6 @@
 
 struct GLFWwindow;
 
-// The functions in this class use auto return type as a reminder to myself
-// to check whether that is what I'd like to go with in the future
-
 namespace sylk {
     class VulkanWindow {
         struct Settings {
@@ -54,21 +51,16 @@ namespace sylk {
     private:
         GLFWwindow* window_;
 
-        // sylk
         Settings settings_;
         ValidationLayers validation_layers_;
         Swapchain swapchain_;
 
-        // stl
         std::vector<const char*> required_extensions_;
         std::vector<const char*> available_extensions_;
         static constexpr std::array required_device_extensions_ {
                 VK_KHR_SWAPCHAIN_EXTENSION_NAME,
         };
 
-        // vulkan
-        vk::Queue graphics_queue_;
-        vk::Queue presentation_queue_;
         vk::Instance instance_;
         vk::Device device_;
         vk::PhysicalDevice physical_device_;

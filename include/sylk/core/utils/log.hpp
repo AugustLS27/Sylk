@@ -23,13 +23,13 @@ namespace sylk {
 
 #ifndef SYLK_LOG_LEVEL
 #   if defined(SYLK_VERBOSE)
-#       define SYLK_LOG_LEVEL ELogLevel::TRACE
+#       define SYLK_LOG_LEVEL ELogLvl::TRACE
 #   elif defined(SYLK_DEBUG)
 #       define SYLK_LOG_LEVEL ELogLvl::DEBUG
 #   elif defined(SYLK_RELEASE)
-#       define SYLK_LOG_LEVEL ELogLevel::INFO
+#       define SYLK_LOG_LEVEL ELogLvl::INFO
 #   else
-#       define SYLK_LOG_LEVEL ELogLevel::OFF
+#       define SYLK_LOG_LEVEL ELogLvl::OFF
 #   endif
 #endif
 

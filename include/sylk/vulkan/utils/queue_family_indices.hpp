@@ -15,7 +15,7 @@ namespace sylk {
         std::optional<u32> graphics;
         std::optional<u32> presentation;
 
-        [[nodiscard]] bool has_required() const {
+        SYLK_NODISCARD auto has_required() const -> bool {
             return graphics.has_value() && presentation.has_value();
         }
 

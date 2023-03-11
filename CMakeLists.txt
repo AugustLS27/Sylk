@@ -54,6 +54,8 @@ else()
     add_compile_definitions(SYLK_RELEASE)
 endif()
 
+add_compile_definitions(SYLK_NODISCARD=[[nodiscard]])
+
 add_executable(sylk
         libs/glad/glad.c
         libs/img/stb_image.cpp
