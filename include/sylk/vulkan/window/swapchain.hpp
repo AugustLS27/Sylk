@@ -5,7 +5,7 @@
 #ifndef SYLK_VULKAN_WINDOW_SWAPCHAIN_HPP
 #define SYLK_VULKAN_WINDOW_SWAPCHAIN_HPP
 
-#include <sylk/core/utils/rust_style_types.hpp>
+#include <sylk/core/utils/short_types.hpp>
 
 #include <sylk/vulkan/vulkan.hpp>
 #include <sylk/vulkan/window/graphics_pipeline.hpp>
@@ -46,8 +46,9 @@ namespace sylk {
         void create_command_buffer();
         void create_framebuffers();
         void create_synchronizers();
-        void create_vertex_buffer();
 
+        template<typename T>
+        void create_staged_buffer(Buffer& buffer, vk::BufferUsageFlags buffer_type, const std::vector<T>& data);
         void record_command_buffer(vk::CommandBuffer buffer, u32 image_index);
 
         auto select_surface_format(const std::vector<vk::SurfaceFormatKHR>& available_formats) const -> vk::SurfaceFormatKHR;
@@ -86,14 +87,22 @@ namespace sylk {
         Buffer vertex_buffer_;
         const std::vector<Vertex> vertices_ = {
                 Vertex {
-                        .pos = {0.0f, -0.5f}, .color = {1.0f, 1.0f, 1.0f}
+                        .pos = {-0.5f, -0.5f}, .color = {1.0f, 0.0f, 0.0f}
                 },
                 Vertex {
-                        .pos = {0.5f,  0.5f}, .color = {0.0f, 1.0f, 0.0f}
+                        .pos = {0.5f,  -0.5f}, .color = {0.0f, 1.0f, 0.0f}
                 },
                 Vertex {
-                        .pos = {-0.5f, 0.5f}, .color = {0.0f, 0.0f, 1.0f}
+                        .pos = {0.5f, 0.5f},   .color = {0.0f, 0.0f, 1.0f}
                 },
+                Vertex {
+                        .pos = {-0.5f, 0.5f},  .color = {0.5f, 0.5f, 0.5f}
+                },
+        };
+
+        Buffer index_buffer_;
+        const std::vector<u16> indices_ = {
+                0, 1, 2, 2, 3, 0
         };
     };
 

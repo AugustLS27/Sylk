@@ -40,7 +40,8 @@ namespace sylk {
         graphics_pipeline_.create(extent_, renderpass_);
         create_framebuffers();
         create_command_pool();
-        create_vertex_buffer();
+        create_staged_buffer(vertex_buffer_, vk::BufferUsageFlagBits::eVertexBuffer, vertices_);
+        create_staged_buffer(index_buffer_, vk::BufferUsageFlagBits::eIndexBuffer, indices_);
         create_command_buffer();
         create_synchronizers();
 
@@ -51,9 +52,11 @@ namespace sylk {
         device_.destroyCommandPool(command_pool_);
         log(ELogLvl::TRACE, "Destroyed command pool");
 
-        device_.destroyBuffer(vertex_buffer_.get_vkbuffer());
-        device_.freeMemory(vertex_buffer_.get_memory_handle());
+        vertex_buffer_.destroy_with(device_);
         log(ELogLvl::TRACE, "Destroyed vertex buffer");
+
+        index_buffer_.destroy_with(device_);
+        log(ELogLvl::TRACE, "Destroyed index buffer");
 
         graphics_pipeline_.destroy();
 
@@ -276,6 +279,7 @@ namespace sylk {
         buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, graphics_pipeline_.get_handle());
 
         buffer.bindVertexBuffers(0, vertex_buffer_.get_vkbuffer(), vk::DeviceSize{0});
+        buffer.bindIndexBuffer(index_buffer_.get_vkbuffer(), vk::DeviceSize{0}, vk::IndexType::eUint16);
 
         buffer.setViewport(0, vk::Viewport {
                 .width    = cast<f32>(extent_.width),
@@ -285,7 +289,7 @@ namespace sylk {
 
         buffer.setScissor(0, vk::Rect2D{.extent = extent_});
 
-        buffer.draw(cast<u32>(vertices_.size()), 1, 0, 0);
+        buffer.drawIndexed(cast<u32>(indices_.size()), 1, 0, 0, 0);
 
         buffer.endRenderPass();
         handle_result(buffer.end(), "Failed to finish recording command buffer");
@@ -442,23 +446,13 @@ namespace sylk {
         images_ = images;
     }
 
-    void Swapchain::create_vertex_buffer() {
-        const auto buffer_size = sizeof(vertices_[0]) * vertices_.size();
-
-        const auto vertex_buffer_data = Buffer::CreateData {
-                .data_to_map        = nullptr,
-                .device             = device_,
-                .physical_device    = physical_device_,
-                .buffer_size        = buffer_size,
-                .buffer_usage_flags = vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst,
-                .property_flags     = vk::MemoryPropertyFlagBits::eDeviceLocal,
-        };
-
-        vertex_buffer_.create(vertex_buffer_data);
+    template<typename T>
+    void Swapchain::create_staged_buffer(Buffer& buffer, vk::BufferUsageFlags buffer_type, const std::vector<T>& data) {
+        const vk::DeviceSize buffer_size = sizeof(data[0]) * data.size();
 
         Buffer staging_buffer;
         const auto staging_buffer_data = Buffer::CreateData {
-                .data_to_map        = vertices_.data(),
+                .data_to_map        = data.data(),
                 .device             = device_,
                 .physical_device    = physical_device_,
                 .buffer_size        = buffer_size,
@@ -468,15 +462,25 @@ namespace sylk {
 
         staging_buffer.create(staging_buffer_data);
 
+        const auto buffer_data = Buffer::CreateData {
+                .data_to_map        = nullptr,
+                .device             = device_,
+                .physical_device    = physical_device_,
+                .buffer_size        = buffer_size,
+                .buffer_usage_flags = buffer_type | vk::BufferUsageFlagBits::eTransferDst,
+                .property_flags     = vk::MemoryPropertyFlagBits::eDeviceLocal,
+        };
+
+        buffer.create(buffer_data);
+
         staging_buffer.copy_onto({
-                .target = vertex_buffer_.get_vkbuffer(),
-                .size   = buffer_size,
-                .pool   = command_pool_,
-                .device = device_,
-                .queue  = graphics_queue_,
-        });
+                                         .target = buffer.get_vkbuffer(),
+                                         .size   = buffer_size,
+                                         .pool   = command_pool_,
+                                         .device = device_,
+                                         .queue  = graphics_queue_,
+                                 });
 
         staging_buffer.destroy_with(device_);
     }
-
 }

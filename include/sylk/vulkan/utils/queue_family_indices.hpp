@@ -5,7 +5,7 @@
 #ifndef SYLK_VULKAN_UTILS_QUEUEFAMILYINDICES_HPP
 #define SYLK_VULKAN_UTILS_QUEUEFAMILYINDICES_HPP
 
-#include <sylk/core/utils/rust_style_types.hpp>
+#include <sylk/core/utils/short_types.hpp>
 
 #include <sylk/vulkan/vulkan.hpp>
 

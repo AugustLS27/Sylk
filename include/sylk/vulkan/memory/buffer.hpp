@@ -6,7 +6,7 @@
 #define SYLK_VULKAN_MEMORY_BUFFER_HPP
 
 #include <sylk/vulkan/vulkan.hpp>
-#include <sylk/core/utils/rust_style_types.hpp>
+#include <sylk/core/utils/short_types.hpp>
 
 namespace sylk {
 

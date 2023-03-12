@@ -2,12 +2,12 @@
 // Created by August on 21-2-23.
 //
 
-#ifndef SYLK_CORE_UTILS_RUSTSTYLETYPES_HPP
-#define SYLK_CORE_UTILS_RUSTSTYLETYPES_HPP
+#ifndef SYLK_CORE_UTILS_SHORTTYPES_HPP
+#define SYLK_CORE_UTILS_SHORTTYPES_HPP
 
 // NOTE: These type aliases exist merely for the sake of comfort
 // Despite the name, they're not intended to function as 'int8_t' style cstdint types would
-// Rust types are nicer to write, but C++ requires too much compatibility with various systems to do things that way
+// Short types are nicer to write, but C++ requires too much compatibility with various systems to do things that way
 // Those systems, however, are not Sylk's targets; so this is fine.
 
 namespace sylk {
@@ -25,4 +25,4 @@ namespace sylk {
     using f64 = double;
 }
 
-#endif
+#endif // SYLK_CORE_UTILS_SHORTTYPES_HPP

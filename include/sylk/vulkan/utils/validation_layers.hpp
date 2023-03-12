@@ -5,7 +5,7 @@
 #ifndef SYLK_VULKAN_UTILS_VALIDATIONLAYERS_HPP
 #define SYLK_VULKAN_UTILS_VALIDATIONLAYERS_HPP
 
-#include <sylk/core/utils/rust_style_types.hpp>
+#include <sylk/core/utils/short_types.hpp>
 #include <sylk/vulkan/utils/constants.hpp>
 
 #include <array>

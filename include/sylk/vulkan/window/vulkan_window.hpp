@@ -5,7 +5,7 @@
 #ifndef SYLK_VULKAN_WINDOW_VULKANWINDOW_HPP
 #define SYLK_VULKAN_WINDOW_VULKANWINDOW_HPP
 
-#include <sylk/core/utils/rust_style_types.hpp>
+#include <sylk/core/utils/short_types.hpp>
 #include <sylk/vulkan/utils/validation_layers.hpp>
 #include <sylk/vulkan/window/swapchain.hpp>
 #include <sylk/vulkan/window/graphics_pipeline.hpp>

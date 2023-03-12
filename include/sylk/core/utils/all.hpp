@@ -6,7 +6,7 @@
 #define SYLK_CORE_UTILS_ALL_HPP
 
 #include "log.hpp"
-#include "rust_style_types.hpp"
+#include "short_types.hpp"
 #include "cast.hpp"
 
 #endif // SYLK_CORE_UTILS_ALL_HPP
