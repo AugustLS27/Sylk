@@ -14,15 +14,26 @@ namespace sylk {
     public:
         struct CreateData {
             const void* data_to_map;
+            const vk::Device device;
+            const vk::PhysicalDevice physical_device;
+            const vk::DeviceSize buffer_size;
+            const vk::BufferUsageFlags buffer_usage_flags;
+            const vk::MemoryPropertyFlags property_flags;
+        };
+
+        struct CopyData {
+            vk::Buffer target;
+            vk::DeviceSize size;
+            vk::CommandPool pool;
             vk::Device device;
-            vk::PhysicalDevice physical_device;
-            vk::DeviceSize buffer_size;
-            vk::BufferUsageFlags buffer_usage_flags;
-            vk::MemoryPropertyFlags property_flags;
+            vk::Queue queue;
         };
 
     public:
         void create(CreateData data);
+        void destroy_with(vk::Device device);
+
+        void copy_onto(CopyData data) const;
 
         SYLK_NODISCARD auto get_vkbuffer() const -> vk::Buffer;
         SYLK_NODISCARD auto get_memory_handle() const -> vk::DeviceMemory;

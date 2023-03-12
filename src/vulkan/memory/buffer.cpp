@@ -32,11 +32,14 @@ namespace sylk {
         handle_result(data.device.bindBufferMemory(buffer_, buffer_memory_, 0),
                       "Failed to bind buffer memory");
 
-        const auto [mmap_result, mapped_data] = data.device.mapMemory(buffer_memory_, 0, data.buffer_size);
-        handle_result(mmap_result, "Failed to map buffer to device memory");
-        std::memcpy(mapped_data, data.data_to_map, cast<size_t>(data.buffer_size));
+        // only map memory if there is data to map
+        if (data.data_to_map) {
+            const auto [mmap_result, mapped_data] = data.device.mapMemory(buffer_memory_, 0, data.buffer_size);
+            handle_result(mmap_result, "Failed to map buffer to device memory");
+            std::memcpy(mapped_data, data.data_to_map, cast<size_t>(data.buffer_size));
 
-        data.device.unmapMemory(buffer_memory_);
+            data.device.unmapMemory(buffer_memory_);
+        }
     }
 
     auto Buffer::find_memtype(vk::PhysicalDevice physical_device, u32 type_filter, vk::MemoryPropertyFlags properties) -> u32 {
@@ -59,5 +62,44 @@ namespace sylk {
     auto Buffer::get_memory_handle() const -> vk::DeviceMemory {
         return buffer_memory_;
     }
+
+    void Buffer::copy_onto(Buffer::CopyData data) const {
+        const auto cmd_buffer_alloc_info = vk::CommandBufferAllocateInfo {
+                .commandPool        = data.pool,
+                .level              = vk::CommandBufferLevel::ePrimary,
+                .commandBufferCount = 1,
+        };
+
+        const auto [cmd_buffer_result, cmd_buffers] = data.device.allocateCommandBuffers(cmd_buffer_alloc_info);
+        handle_result(cmd_buffer_result, "Failed to allocate command buffer");
+
+        const auto cmd_buffer_begin_info = vk::CommandBufferBeginInfo {
+                .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit,
+        };
+
+        const auto cmd_buffer = cmd_buffers[0];
+        handle_result(cmd_buffer.begin(cmd_buffer_begin_info), "Failed to begin recording command buffer");
+
+        const auto copy_region = vk::BufferCopy {
+                .size = data.size,
+        };
+
+        cmd_buffer.copyBuffer(buffer_, data.target, copy_region);
+
+        handle_result(cmd_buffer.end(), "Failed to stop recording command buffer");
+
+        const auto submit_info = vk::SubmitInfo().setCommandBuffers(cmd_buffer);
+
+        handle_result(data.queue.submit(submit_info), "Failed to submit to graphics queue");
+        handle_result(data.queue.waitIdle(), "Device error");
+
+        data.device.freeCommandBuffers(data.pool, cmd_buffer);
+    }
+
+    void Buffer::destroy_with(vk::Device device) {
+        device.destroyBuffer(buffer_);
+        device.freeMemory(buffer_memory_);
+    }
+
 
 } // sylk

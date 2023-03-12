@@ -443,16 +443,40 @@ namespace sylk {
     }
 
     void Swapchain::create_vertex_buffer() {
-        const auto buffer_data = Buffer::CreateData {
+        const auto buffer_size = sizeof(vertices_[0]) * vertices_.size();
+
+        const auto vertex_buffer_data = Buffer::CreateData {
+                .data_to_map        = nullptr,
+                .device             = device_,
+                .physical_device    = physical_device_,
+                .buffer_size        = buffer_size,
+                .buffer_usage_flags = vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst,
+                .property_flags     = vk::MemoryPropertyFlagBits::eDeviceLocal,
+        };
+
+        vertex_buffer_.create(vertex_buffer_data);
+
+        Buffer staging_buffer;
+        const auto staging_buffer_data = Buffer::CreateData {
                 .data_to_map        = vertices_.data(),
                 .device             = device_,
                 .physical_device    = physical_device_,
-                .buffer_size        = sizeof(vertices_[0]) * vertices_.size(),
-                .buffer_usage_flags = vk::BufferUsageFlagBits::eVertexBuffer,
+                .buffer_size        = buffer_size,
+                .buffer_usage_flags = vk::BufferUsageFlagBits::eTransferSrc,
                 .property_flags     = vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostVisible,
         };
 
-        vertex_buffer_.create(buffer_data);
+        staging_buffer.create(staging_buffer_data);
+
+        staging_buffer.copy_onto({
+                .target = vertex_buffer_.get_vkbuffer(),
+                .size   = buffer_size,
+                .pool   = command_pool_,
+                .device = device_,
+                .queue  = graphics_queue_,
+        });
+
+        staging_buffer.destroy_with(device_);
     }
 
 }
