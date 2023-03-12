@@ -65,8 +65,8 @@ namespace sylk {
 
         destroy_partial();
 
-        device_.destroyBuffer(vertex_buffer_);
-        device_.freeMemory(vertex_buffer_memory_);
+        vertex_buffer_.destroy();
+        log(ELogLvl::TRACE, "Destroyed vertex buffer");
     }
 
     auto Swapchain::query_device_support_details(const vk::PhysicalDevice device, const vk::SurfaceKHR surface) const
@@ -273,7 +273,7 @@ namespace sylk {
         buffer.beginRenderPass(renderpass_begin_info, vk::SubpassContents::eInline);
         buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, graphics_pipeline_.get_handle());
 
-        buffer.bindVertexBuffers(0, vertex_buffer_, vk::DeviceSize{0});
+        buffer.bindVertexBuffers(0, vertex_buffer_.get(), vk::DeviceSize{0});
 
         buffer.setViewport(0, vk::Viewport {
                 .width    = cast<f32>(extent_.width),
@@ -441,47 +441,16 @@ namespace sylk {
     }
 
     void Swapchain::create_vertex_buffer() {
-        const auto buffer_info = vk::BufferCreateInfo {
-            .size        = sizeof(vertices_[0]) * vertices_.size(),
-            .usage       = vk::BufferUsageFlagBits::eVertexBuffer,
-            .sharingMode = vk::SharingMode::eExclusive,
+        const auto buffer_data = Buffer::CreateData {
+                .data_to_map        = vertices_.data(),
+                .device             = device_,
+                .physical_device    = physical_device_,
+                .buffer_size        = sizeof(vertices_[0]) * vertices_.size(),
+                .buffer_usage_flags = vk::BufferUsageFlagBits::eVertexBuffer,
+                .property_flags     = vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostVisible,
         };
 
-        const auto [buffer_result, buffer] = device_.createBuffer(buffer_info);
-        handle_result(buffer_result, "Failed to create vertex buffer");
-        vertex_buffer_ = buffer;
-
-        const auto memory_requirements = device_.getBufferMemoryRequirements(vertex_buffer_);
-        const auto desired_flags = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-        const auto alloc_info = vk::MemoryAllocateInfo {
-            .allocationSize = memory_requirements.size,
-            .memoryTypeIndex = find_vertex_buffer_memtype(memory_requirements.memoryTypeBits, desired_flags),
-        };
-
-        const auto [alloc_result, memory] = device_.allocateMemory(alloc_info);
-        handle_result(alloc_result, "Failed to allocate device memory");
-        vertex_buffer_memory_ = memory;
-
-        handle_result(device_.bindBufferMemory(vertex_buffer_, vertex_buffer_memory_, 0),
-                      "Failed to bind vertex buffer to memory");
-
-        const auto [mmap_result, data] = device_.mapMemory(vertex_buffer_memory_, 0, buffer_info.size);
-        handle_result(mmap_result, "Failed to map vertex buffer to device memory");
-
-        std::memcpy(data, vertices_.data(), cast<u64>(buffer_info.size));
-        device_.unmapMemory(vertex_buffer_memory_);
+        vertex_buffer_.create(buffer_data);
     }
 
-    auto Swapchain::find_vertex_buffer_memtype(const u32 type_filter, const vk::MemoryPropertyFlags properties) -> u32 {
-        const auto mem_properties = physical_device_.getMemoryProperties();
-
-        for (u32 i = 0; i < mem_properties.memoryTypeCount; ++i) {
-            if ((type_filter & (1 << i))
-            && (mem_properties.memoryTypes[i].propertyFlags & properties) == properties) {
-                return i;
-            }
-        }
-
-        throw std::runtime_error("Failed to find suitable vertex buffer memory type on this device");
-    }
 }

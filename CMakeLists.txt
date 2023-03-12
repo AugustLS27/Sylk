@@ -59,6 +59,8 @@ add_executable(sylk
 
         src/vulkan/shader/shader.cpp
         src/vulkan/shader/vertex.cpp
+
+        src/vulkan/memory/buffer.cpp
         )
 
 target_include_directories(sylk PRIVATE
