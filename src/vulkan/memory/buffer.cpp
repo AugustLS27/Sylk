@@ -52,17 +52,12 @@ namespace sylk {
         throw std::runtime_error("Failed to find suitable vertex buffer memory type on this device");
     }
 
-    auto Buffer::get() const -> vk::Buffer {
+    auto Buffer::get_vkbuffer() const -> vk::Buffer {
         return buffer_;
     }
 
-    Buffer::~Buffer() {
-        destroy();
-    }
-
-    void Buffer::destroy() {
-        device_.destroyBuffer(buffer_);
-        device_.freeMemory(buffer_memory_);
+    auto Buffer::get_memory_handle() const -> vk::DeviceMemory {
+        return buffer_memory_;
     }
 
 } // sylk

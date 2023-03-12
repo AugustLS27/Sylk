@@ -51,6 +51,10 @@ namespace sylk {
         device_.destroyCommandPool(command_pool_);
         log(ELogLvl::TRACE, "Destroyed command pool");
 
+        device_.destroyBuffer(vertex_buffer_.get_vkbuffer());
+        device_.freeMemory(vertex_buffer_.get_memory_handle());
+        log(ELogLvl::TRACE, "Destroyed vertex buffer");
+
         graphics_pipeline_.destroy();
 
         device_.destroyRenderPass(renderpass_);
@@ -65,8 +69,6 @@ namespace sylk {
 
         destroy_partial();
 
-        vertex_buffer_.destroy();
-        log(ELogLvl::TRACE, "Destroyed vertex buffer");
     }
 
     auto Swapchain::query_device_support_details(const vk::PhysicalDevice device, const vk::SurfaceKHR surface) const
@@ -273,7 +275,7 @@ namespace sylk {
         buffer.beginRenderPass(renderpass_begin_info, vk::SubpassContents::eInline);
         buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, graphics_pipeline_.get_handle());
 
-        buffer.bindVertexBuffers(0, vertex_buffer_.get(), vk::DeviceSize{0});
+        buffer.bindVertexBuffers(0, vertex_buffer_.get_vkbuffer(), vk::DeviceSize{0});
 
         buffer.setViewport(0, vk::Viewport {
                 .width    = cast<f32>(extent_.width),

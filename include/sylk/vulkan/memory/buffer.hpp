@@ -20,19 +20,17 @@ namespace sylk {
             vk::BufferUsageFlags buffer_usage_flags;
             vk::MemoryPropertyFlags property_flags;
         };
+
     public:
         void create(CreateData data);
-        void destroy();
 
-        ~Buffer();
-
-        auto get() const -> vk::Buffer;
+        SYLK_NODISCARD auto get_vkbuffer() const -> vk::Buffer;
+        SYLK_NODISCARD auto get_memory_handle() const -> vk::DeviceMemory;
 
     private:
-        auto find_memtype(vk::PhysicalDevice physical_device, u32 type_filter, vk::MemoryPropertyFlags properties) -> u32;
+        SYLK_NODISCARD auto find_memtype(vk::PhysicalDevice physical_device, u32 type_filter, vk::MemoryPropertyFlags properties) -> u32;
 
     private:
-        vk::Device device_;
         vk::Buffer buffer_;
         vk::DeviceMemory buffer_memory_;
     };
