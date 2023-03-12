@@ -2,7 +2,8 @@
 // Created by August on 25-2-23.
 //
 
-#pragma once
+#ifndef SYLK_VULKAN_WINDOW_VULKANWINDOW_HPP
+#define SYLK_VULKAN_WINDOW_VULKANWINDOW_HPP
 
 #include <sylk/core/utils/rust_style_types.hpp>
 #include <sylk/vulkan/utils/validation_layers.hpp>
@@ -67,3 +68,5 @@ namespace sylk {
         vk::SurfaceKHR surface_;
     };
 }
+
+#endif // SYLK_VULKAN_WINDOW_VULKANWINDOW_HPP

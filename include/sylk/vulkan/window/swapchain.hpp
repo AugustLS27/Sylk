@@ -2,11 +2,14 @@
 // Created by August Silva on 7-3-23.
 //
 
-#pragma once
+#ifndef SYLK_VULKAN_WINDOW_SWAPCHAIN_HPP
+#define SYLK_VULKAN_WINDOW_SWAPCHAIN_HPP
+
+#include <sylk/core/utils/rust_style_types.hpp>
 
 #include <sylk/vulkan/vulkan.hpp>
-#include <sylk/core/utils/rust_style_types.hpp>
 #include <sylk/vulkan/window/graphics_pipeline.hpp>
+#include <sylk/vulkan/shader/vertex.hpp>
 
 #include <vector>
 
@@ -42,13 +45,14 @@ namespace sylk {
         void create_command_buffer();
         void create_framebuffers();
         void create_synchronizers();
+        void create_vertex_buffer();
 
         void record_command_buffer(vk::CommandBuffer buffer, u32 image_index);
 
-
-        vk::SurfaceFormatKHR select_surface_format(const std::vector<vk::SurfaceFormatKHR>& available_formats) const;
-        vk::PresentModeKHR select_present_mode(const std::vector<vk::PresentModeKHR>& available_modes) const;
-        vk::Extent2D select_extent_2d(const vk::SurfaceCapabilitiesKHR capabilities, GLFWwindow* window) const;
+        auto select_surface_format(const std::vector<vk::SurfaceFormatKHR>& available_formats) const -> vk::SurfaceFormatKHR;
+        auto select_present_mode(const std::vector<vk::PresentModeKHR>& available_modes) const -> vk::PresentModeKHR;
+        auto select_extent_2d(vk::SurfaceCapabilitiesKHR capabilities, GLFWwindow* window) const -> vk::Extent2D;
+        auto find_vertex_buffer_memtype(const u32 type_filter, const vk::MemoryPropertyFlags properties) -> u32;
 
     private:
         u32 current_frame_;
@@ -78,6 +82,22 @@ namespace sylk {
         std::vector<vk::Image> images_;
         std::vector<vk::ImageView> image_views_;
         std::vector<vk::Framebuffer> frame_buffers_;
+
+        vk::Buffer vertex_buffer_;
+        const std::vector<Vertex> vertices_ = {
+                Vertex {
+                        .pos = {0.0f, -0.5f}, .color = {1.0f, 1.0f, 1.0f}
+                },
+                Vertex {
+                        .pos = {0.5f,  0.5f}, .color = {0.0f, 1.0f, 0.0f}
+                },
+                Vertex {
+                        .pos = {-0.5f, 0.5f}, .color = {0.0f, 0.0f, 1.0f}
+                },
+        };
+        vk::DeviceMemory vertex_buffer_memory_;
     };
 
 }
+
+#endif // SYLK_VULKAN_WINDOW_SWAPCHAIN_HPP

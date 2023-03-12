@@ -2,7 +2,8 @@
 // Created by August Silva on 9-3-23.
 //
 
-#pragma once
+#ifndef SYLK_VULKAN_SHADER_SHADER_HPP
+#define SYLK_VULKAN_SHADER_SHADER_HPP
 
 #include <sylk/core/utils/rust_style_types.hpp>
 #include <sylk/vulkan/vulkan.hpp>
@@ -28,3 +29,5 @@ namespace sylk {
         vk::ShaderModule shader_module_;
     };
 }
+
+#endif // SYLK_VULKAN_SHADER_SHADER_HPP

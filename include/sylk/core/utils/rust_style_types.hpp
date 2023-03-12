@@ -2,12 +2,13 @@
 // Created by August on 21-2-23.
 //
 
-#pragma once
+#ifndef SYLK_CORE_UTILS_RUSTSTYLETYPES_HPP
+#define SYLK_CORE_UTILS_RUSTSTYLETYPES_HPP
 
 // NOTE: These type aliases exist merely for the sake of comfort
 // Despite the name, they're not intended to function as 'int8_t' style cstdint types would
-// I simply like the way Rust types are written, but C++ requires too much compatibility with systems to do things that way
-// Those systems, however, are not my targets; so this is fine.
+// Rust types are nicer to write, but C++ requires too much compatibility with various systems to do things that way
+// Those systems, however, are not Sylk's targets; so this is fine.
 
 namespace sylk {
     using i8 = signed char;
@@ -23,3 +24,5 @@ namespace sylk {
     using f32 = float;
     using f64 = double;
 }
+
+#endif

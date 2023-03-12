@@ -2,7 +2,8 @@
 // Created by August on 21-2-23.
 //
 
-#pragma once
+#ifndef SYLK_CORE_UTILS_LOG_HPP
+#define SYLK_CORE_UTILS_LOG_HPP
 
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
@@ -98,3 +99,5 @@ namespace sylk {
         log(ELogLvl::INFO, msg, args...);
     }
 }
+
+#endif

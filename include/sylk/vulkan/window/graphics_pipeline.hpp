@@ -2,7 +2,8 @@
 // Created by August Silva on 8-3-23.
 //
 
-#pragma once
+#ifndef SYLK_VULKAN_WINDOW_GRAPHICSPIPELINE_HPP
+#define SYLK_VULKAN_WINDOW_GRAPHICSPIPELINE_HPP
 
 #include <sylk/vulkan/vulkan.hpp>
 #include <sylk/vulkan/shader/shader.hpp>
@@ -26,3 +27,5 @@ namespace sylk {
     };
 
 }
+
+#endif // SYLK_VULKAN_WINDOW_GRAPHICSPIPELINE_HPP

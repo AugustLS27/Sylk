@@ -2,7 +2,8 @@
 // Created by August Silva on 7-3-23.
 //
 
-#pragma once
+#ifndef SYLK_CORE_UTILS_CAST_HPP
+#define SYLK_CORE_UTILS_CAST_HPP
 
 namespace sylk {
     template<typename T>
@@ -18,3 +19,5 @@ namespace sylk {
         return static_cast<T1>(val);
     }
 }
+
+#endif // SYLK_CORE_UTILS_CAST_HPP

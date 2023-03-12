@@ -5,13 +5,14 @@
 #include <sylk/vulkan/window/graphics_pipeline.hpp>
 #include <sylk/core/utils/all.hpp>
 #include <sylk/vulkan/utils/result_handler.hpp>
+#include <sylk/vulkan/shader/vertex.hpp>
 
 constexpr const char* DEFAULT_SHADER_ENTRY_NAME = "main";
 
 namespace sylk {
     void GraphicsPipeline::create(const vk::Extent2D extent, const vk::RenderPass renderpass) {
-        vertex_shader_.create("../../shaders/vk/spv/vert.spv");
-        fragment_shader_.create("../../shaders/vk/spv/frag.spv");
+        vertex_shader_.create("../../shaders/vk/vert.spv");
+        fragment_shader_.create("../../shaders/vk/frag.spv");
 
         const auto vert_stage_info = vk::PipelineShaderStageCreateInfo {
                 .stage  = vk::ShaderStageFlagBits::eVertex,
@@ -37,10 +38,11 @@ namespace sylk {
 
         const auto dynamic_state_info = vk::PipelineDynamicStateCreateInfo().setDynamicStates(dynamic_states);
 
-        const auto vertex_input_state_info = vk::PipelineVertexInputStateCreateInfo {
-                .vertexBindingDescriptionCount   = 0,
-                .vertexAttributeDescriptionCount = 0,
-        };
+        const auto vertex_attribute_descs = Vertex::attribute_descriptions();
+        const auto vertex_binding_desc = Vertex::binding_description();
+        const auto vertex_input_state_info = vk::PipelineVertexInputStateCreateInfo ()
+                .setVertexAttributeDescriptions(vertex_attribute_descs)
+                .setVertexBindingDescriptions(vertex_binding_desc);
 
         const auto input_assembly_state_info = vk::PipelineInputAssemblyStateCreateInfo {
                 .topology               = vk::PrimitiveTopology::eTriangleList,

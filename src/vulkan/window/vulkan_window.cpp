@@ -98,6 +98,7 @@ namespace sylk {
 #else
                 .enabledLayerCount = 0,
 #endif
+                .enabledExtensionCount = cast<u32>(required_extensions_.size()),
                 .ppEnabledExtensionNames = required_extensions_.data(),
         };
 

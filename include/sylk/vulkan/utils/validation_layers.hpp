@@ -2,7 +2,8 @@
 // Created by August Silva on 5-3-23.
 //
 
-#pragma once
+#ifndef SYLK_VULKAN_UTILS_VALIDATIONLAYERS_HPP
+#define SYLK_VULKAN_UTILS_VALIDATIONLAYERS_HPP
 
 #include <sylk/core/utils/rust_style_types.hpp>
 #include <sylk/vulkan/utils/constants.hpp>
@@ -45,3 +46,5 @@ namespace sylk {
         vk::Instance& vk_instance_;
     };
 }
+
+#endif // SYLK_VULKAN_UTILS_VALIDATIONLAYERS_HPP

@@ -40,6 +40,7 @@ namespace sylk {
         graphics_pipeline_.create(extent_, renderpass_);
         create_framebuffers();
         create_command_pool();
+        create_vertex_buffer();
         create_command_buffer();
         create_synchronizers();
 
@@ -63,6 +64,9 @@ namespace sylk {
         log(ELogLvl::TRACE, "Destroyed synchronization objects");
 
         destroy_partial();
+
+        device_.destroyBuffer(vertex_buffer_);
+        device_.freeMemory(vertex_buffer_memory_);
     }
 
     auto Swapchain::query_device_support_details(const vk::PhysicalDevice device, const vk::SurfaceKHR surface) const
@@ -146,19 +150,19 @@ namespace sylk {
         };
 
         const auto subresource_range = vk::ImageSubresourceRange {
-            .aspectMask = vk::ImageAspectFlagBits::eColor,
-            .baseMipLevel = 0,
-            .levelCount = 1,
+            .aspectMask     = vk::ImageAspectFlagBits::eColor,
+            .baseMipLevel   = 0,
+            .levelCount     = 1,
             .baseArrayLayer = 0,
-            .layerCount = 1,
+            .layerCount     = 1,
         };
 
         for (u64 i = 0; i < images_.size(); ++i) {
             const auto create_info = vk::ImageViewCreateInfo {
-                .image = images_[i],
-                .viewType = vk::ImageViewType::e2D,
-                .format = format_,
-                .components = component_mappings,
+                .image            = images_[i],
+                .viewType         = vk::ImageViewType::e2D,
+                .format           = format_,
+                .components       = component_mappings,
                 .subresourceRange = subresource_range,
             };
 
@@ -176,9 +180,9 @@ namespace sylk {
         for (u64 i = 0; i < image_views_.size(); ++i) {
             const auto framebuffer_info = vk::FramebufferCreateInfo {
                 .renderPass = renderpass_,
-                .width = extent_.width,
-                .height = extent_.height,
-                .layers = 1,
+                .width      = extent_.width,
+                .height     = extent_.height,
+                .layers     = 1,
             }
             .setAttachments(image_views_[i]);
 
@@ -259,9 +263,9 @@ namespace sylk {
             }}
         };
         const auto renderpass_begin_info = vk::RenderPassBeginInfo {
-            .renderPass = renderpass_,
+            .renderPass  = renderpass_,
             .framebuffer = frame_buffers_[image_index],
-            .renderArea = vk::Rect2D {.extent = extent_},
+            .renderArea  = vk::Rect2D {.extent = extent_},
 
         }
         .setClearValues(clear_color);
@@ -269,23 +273,25 @@ namespace sylk {
         buffer.beginRenderPass(renderpass_begin_info, vk::SubpassContents::eInline);
         buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, graphics_pipeline_.get_handle());
 
+        buffer.bindVertexBuffers(0, vertex_buffer_, vk::DeviceSize{0});
+
         buffer.setViewport(0, vk::Viewport {
-                .width = cast<f32>(extent_.width),
-                .height = cast<f32>(extent_.height),
+                .width    = cast<f32>(extent_.width),
+                .height   = cast<f32>(extent_.height),
                 .maxDepth = 1.0f,
         });
 
         buffer.setScissor(0, vk::Rect2D{.extent = extent_});
 
-        buffer.draw(3, 1, 0, 0);
+        buffer.draw(cast<u32>(vertices_.size()), 1, 0, 0);
 
         buffer.endRenderPass();
         handle_result(buffer.end(), "Failed to finish recording command buffer");
     }
 
     void Swapchain::create_command_pool() {
-        const auto pool_info = vk::CommandPoolCreateInfo {
-            .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+        const auto pool_info  = vk::CommandPoolCreateInfo {
+            .flags            = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
             .queueFamilyIndex = graphics_queue_family_index_,
         };
 
@@ -298,8 +304,8 @@ namespace sylk {
 
     void Swapchain::create_command_buffer() {
         const auto buffer_alloc_info = vk::CommandBufferAllocateInfo {
-                .commandPool = command_pool_,
-                .level = vk::CommandBufferLevel::ePrimary,
+                .commandPool        = command_pool_,
+                .level              = vk::CommandBufferLevel::ePrimary,
                 .commandBufferCount = cast<u32>(command_buffers_.size()),
         };
 
@@ -312,19 +318,19 @@ namespace sylk {
 
     void Swapchain::create_renderpass() {
         const auto color_attachment = vk::AttachmentDescription {
-            .format = format_,
-            .samples = vk::SampleCountFlagBits::e1,
-            .loadOp = vk::AttachmentLoadOp::eClear,
-            .storeOp = vk::AttachmentStoreOp::eStore,
-            .stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
+            .format         = format_,
+            .samples        = vk::SampleCountFlagBits::e1,
+            .loadOp         = vk::AttachmentLoadOp::eClear,
+            .storeOp        = vk::AttachmentStoreOp::eStore,
+            .stencilLoadOp  = vk::AttachmentLoadOp::eDontCare,
             .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
-            .initialLayout = vk::ImageLayout::eUndefined,
-            .finalLayout = vk::ImageLayout::ePresentSrcKHR,
+            .initialLayout  = vk::ImageLayout::eUndefined,
+            .finalLayout    = vk::ImageLayout::ePresentSrcKHR,
         };
 
         const auto color_attachment_ref = vk::AttachmentReference {
             .attachment = 0,
-            .layout = vk::ImageLayout::eColorAttachmentOptimal,
+            .layout     = vk::ImageLayout::eColorAttachmentOptimal,
         };
 
         const auto subpass = vk::SubpassDescription {
@@ -333,12 +339,12 @@ namespace sylk {
         .setColorAttachments(color_attachment_ref);
 
         const auto subpass_dependency = vk::SubpassDependency {
-            .srcSubpass = VK_SUBPASS_EXTERNAL,
-            .dstSubpass = 0,
-            .srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput,
-            .dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput,
+            .srcSubpass    = VK_SUBPASS_EXTERNAL,
+            .dstSubpass    = 0,
+            .srcStageMask  = vk::PipelineStageFlagBits::eColorAttachmentOutput,
+            .dstStageMask  = vk::PipelineStageFlagBits::eColorAttachmentOutput,
             .srcAccessMask = vk::AccessFlagBits::eNone,
-            .dstAccessMask =vk::AccessFlagBits::eColorAttachmentWrite,
+            .dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite,
         };
 
         const auto render_pass_info = vk::RenderPassCreateInfo()
@@ -354,7 +360,7 @@ namespace sylk {
     }
 
     void Swapchain::set_queues(const vk::Queue graphics, const vk::Queue present) {
-        graphics_queue_ = graphics;
+        graphics_queue_     = graphics;
         presentation_queue_ = present;
     }
 
@@ -387,17 +393,16 @@ namespace sylk {
 
     void Swapchain::setup_swapchain() {
         const auto support_details = query_device_support_details(physical_device_, surface_);
-        const auto surface_format = select_surface_format(support_details.surface_formats);
+        const auto surface_format  = select_surface_format(support_details.surface_formats);
 
         format_ = surface_format.format;
         extent_ = select_extent_2d(support_details.surface_capabilities, window_);
 
         const auto max_image_count = support_details.surface_capabilities.maxImageCount;
         const auto min_image_count = support_details.surface_capabilities.minImageCount + 1;
-        const bool has_max_images = max_image_count > 0;
 
-        const auto swapchain_img_count = (has_max_images && min_image_count > max_image_count ?
-                                    max_image_count : min_image_count);
+        const auto swapchain_img_count = (max_image_count > 0 && min_image_count > max_image_count ?
+                                            max_image_count : min_image_count);
 
         const auto queue_indices = QueueFamilyIndices::find(physical_device_, surface_);
         graphics_queue_family_index_ = queue_indices.graphics.value();
@@ -410,19 +415,19 @@ namespace sylk {
         }
 
         auto create_info = vk::SwapchainCreateInfoKHR {
-            .surface = surface_,
-            .minImageCount = swapchain_img_count,
-            .imageFormat = format_,
-            .imageColorSpace = surface_format.colorSpace,
-            .imageExtent = extent_,
+            .surface          = surface_,
+            .minImageCount    = swapchain_img_count,
+            .imageFormat      = format_,
+            .imageColorSpace  = surface_format.colorSpace,
+            .imageExtent      = extent_,
             .imageArrayLayers = 1,
-            .imageUsage = vk::ImageUsageFlagBits::eColorAttachment,
+            .imageUsage       = vk::ImageUsageFlagBits::eColorAttachment,
             .imageSharingMode = (queues_equal ? vk::SharingMode::eExclusive : vk::SharingMode::eConcurrent),
-            .preTransform = support_details.surface_capabilities.currentTransform,
-            .compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque,
-            .presentMode = select_present_mode(support_details.present_modes),
-            .clipped = true,
-            .oldSwapchain = nullptr,
+            .preTransform     = support_details.surface_capabilities.currentTransform,
+            .compositeAlpha   = vk::CompositeAlphaFlagBitsKHR::eOpaque,
+            .presentMode      = select_present_mode(support_details.present_modes),
+            .clipped          = true,
+            .oldSwapchain     = nullptr,
         }
         .setQueueFamilyIndices(active_queues);
 
@@ -433,5 +438,50 @@ namespace sylk {
         const auto [img_result, images] = device_.getSwapchainImagesKHR(swapchain_);
         handle_result(img_result, "Failed to acquire swapchain images");
         images_ = images;
+    }
+
+    void Swapchain::create_vertex_buffer() {
+        const auto buffer_info = vk::BufferCreateInfo {
+            .size        = sizeof(vertices_[0]) * vertices_.size(),
+            .usage       = vk::BufferUsageFlagBits::eVertexBuffer,
+            .sharingMode = vk::SharingMode::eExclusive,
+        };
+
+        const auto [buffer_result, buffer] = device_.createBuffer(buffer_info);
+        handle_result(buffer_result, "Failed to create vertex buffer");
+        vertex_buffer_ = buffer;
+
+        const auto memory_requirements = device_.getBufferMemoryRequirements(vertex_buffer_);
+        const auto desired_flags = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+        const auto alloc_info = vk::MemoryAllocateInfo {
+            .allocationSize = memory_requirements.size,
+            .memoryTypeIndex = find_vertex_buffer_memtype(memory_requirements.memoryTypeBits, desired_flags),
+        };
+
+        const auto [alloc_result, memory] = device_.allocateMemory(alloc_info);
+        handle_result(alloc_result, "Failed to allocate device memory");
+        vertex_buffer_memory_ = memory;
+
+        handle_result(device_.bindBufferMemory(vertex_buffer_, vertex_buffer_memory_, 0),
+                      "Failed to bind vertex buffer to memory");
+
+        const auto [mmap_result, data] = device_.mapMemory(vertex_buffer_memory_, 0, buffer_info.size);
+        handle_result(mmap_result, "Failed to map vertex buffer to device memory");
+
+        std::memcpy(data, vertices_.data(), cast<u64>(buffer_info.size));
+        device_.unmapMemory(vertex_buffer_memory_);
+    }
+
+    auto Swapchain::find_vertex_buffer_memtype(const u32 type_filter, const vk::MemoryPropertyFlags properties) -> u32 {
+        const auto mem_properties = physical_device_.getMemoryProperties();
+
+        for (u32 i = 0; i < mem_properties.memoryTypeCount; ++i) {
+            if ((type_filter & (1 << i))
+            && (mem_properties.memoryTypes[i].propertyFlags & properties) == properties) {
+                return i;
+            }
+        }
+
+        throw std::runtime_error("Failed to find suitable vertex buffer memory type on this device");
     }
 }

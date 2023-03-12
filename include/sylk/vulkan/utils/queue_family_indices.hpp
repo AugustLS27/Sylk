@@ -2,7 +2,8 @@
 // Created by August Silva on 10-3-23.
 //
 
-#pragma once
+#ifndef SYLK_VULKAN_UTILS_QUEUEFAMILYINDICES_HPP
+#define SYLK_VULKAN_UTILS_QUEUEFAMILYINDICES_HPP
 
 #include <sylk/core/utils/rust_style_types.hpp>
 
@@ -22,3 +23,5 @@ namespace sylk {
         static auto find(vk::PhysicalDevice device, vk::SurfaceKHR surface) -> QueueFamilyIndices;
     };
 }
+
+#endif // SYLK_VULKAN_UTILS_QUEUEFAMILYINDICES_HPP
