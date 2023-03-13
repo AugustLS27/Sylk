@@ -3,8 +3,8 @@
 //
 
 #include <sylk/core/utils/log.hpp>
-#include <sylk/vulkan/vulkan.hpp>
 #include <sylk/vulkan/utils/result_handler.hpp>
+#include <sylk/vulkan/vulkan.hpp>
 
 #include <magic_enum/magic_enum.hpp>
 

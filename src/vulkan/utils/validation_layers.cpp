@@ -5,19 +5,18 @@
 #include <sylk/vulkan/vulkan.hpp>
 #include <magic_enum/magic_enum.hpp>
 
-#include <sylk/vulkan/utils/validation_layers.hpp>
-#include <sylk/vulkan/utils/result_handler.hpp>
 #include <sylk/core/utils/log.hpp>
+#include <sylk/vulkan/utils/result_handler.hpp>
+#include <sylk/vulkan/utils/validation_layers.hpp>
 
 namespace sylk {
     ValidationLayers::ValidationLayers(vk::Instance& instance)
-            : vk_instance_(instance)
-    {}
+        : vk_instance_(instance) {}
 
-    // i know this is nearly a duplicate of required_extensions_available() [window.cpp]
-    // however, minor differences between what these functions actually are trying to do
-    // makes homogenizing this a bigger pita than is worth right now
-    // perhaps in the future i'll figure out something cleaner
+    // i know this is nearly a duplicate of required_extensions_available()
+    // [window.cpp] however, minor differences between what these functions
+    // actually are trying to do makes homogenizing this a bigger pita than is
+    // worth right now perhaps in the future i'll figure out something cleaner
     bool ValidationLayers::supports_required_layers() {
         fetch_available_validation_layers();
 
@@ -32,7 +31,10 @@ namespace sylk {
             }
 
             if (!found) {
-                log(ELogLvl::ERROR, "Required validation layer \"{}\" was not found on this device", req_layer);
+                log(ELogLvl::ERROR,
+                    "Required validation layer \"{}\" was not found on this "
+                    "device",
+                    req_layer);
                 all_available = false;
             }
         }
@@ -66,11 +68,7 @@ namespace sylk {
         }
     }
 
-    u32 ValidationLayers::enabled_layer_count() {
-        return static_cast<u32>(required_layers_.size());
-    }
+    u32 ValidationLayers::enabled_layer_count() { return static_cast<u32>(required_layers_.size()); }
 
-    const std::vector<const char*>& ValidationLayers::enabled_layer_container() {
-        return required_layers_;
-    }
-}
+    const std::vector<const char*>& ValidationLayers::enabled_layer_container() { return required_layers_; }
+}  // namespace sylk

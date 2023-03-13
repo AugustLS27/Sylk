@@ -7,13 +7,13 @@
 
 #include <sylk/core/utils/short_types.hpp>
 #include <sylk/vulkan/utils/validation_layers.hpp>
-#include <sylk/vulkan/window/swapchain.hpp>
-#include <sylk/vulkan/window/graphics_pipeline.hpp>
 #include <sylk/vulkan/vulkan.hpp>
+#include <sylk/vulkan/window/graphics_pipeline.hpp>
+#include <sylk/vulkan/window/swapchain.hpp>
 
-#include <vector>
-#include <span>
 #include <optional>
+#include <span>
+#include <vector>
 
 struct GLFWwindow;
 
@@ -22,13 +22,13 @@ namespace sylk {
         struct Settings {
             Settings();
 
-            const char* title = "Sylk";
-            i32 width = 1280;
-            i32 height = 720;
-            bool fullscreen = false;
+            const char* title      = "Sylk";
+            i32         width      = 1280;
+            i32         height     = 720;
+            bool        fullscreen = false;
         };
 
-    public:
+      public:
         explicit VulkanWindow(Settings settings = {});
         ~VulkanWindow();
 
@@ -37,7 +37,7 @@ namespace sylk {
 
         auto is_open() const -> bool;
 
-    private:
+      private:
         void create_window();
         void create_instance();
         void select_physical_device();
@@ -49,24 +49,24 @@ namespace sylk {
         auto device_supports_required_extensions(vk::PhysicalDevice device) const -> bool;
         auto device_is_suitable(vk::PhysicalDevice device) const -> bool;
 
-    private:
+      private:
         GLFWwindow* window_;
 
-        Settings settings_;
+        Settings         settings_;
         ValidationLayers validation_layers_;
-        Swapchain swapchain_;
+        Swapchain        swapchain_;
 
-        std::vector<const char*> required_extensions_;
-        std::vector<const char*> available_extensions_;
+        std::vector<const char*>    required_extensions_;
+        std::vector<const char*>    available_extensions_;
         static constexpr std::array required_device_extensions_ {
-                VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+            VK_KHR_SWAPCHAIN_EXTENSION_NAME,
         };
 
-        vk::Instance instance_;
-        vk::Device device_;
+        vk::Instance       instance_;
+        vk::Device         device_;
         vk::PhysicalDevice physical_device_;
-        vk::SurfaceKHR surface_;
+        vk::SurfaceKHR     surface_;
     };
 }
 
-#endif // SYLK_VULKAN_WINDOW_VULKANWINDOW_HPP
+#endif  // SYLK_VULKAN_WINDOW_VULKANWINDOW_HPP

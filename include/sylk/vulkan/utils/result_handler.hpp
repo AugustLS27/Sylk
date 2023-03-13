@@ -15,4 +15,4 @@ namespace sylk {
     void handle_result(vk::Result result, const char* error_message, ELogLvl severity = ELogLvl::WARN);
 }
 
-#endif // SYLK_VULKAN_UTILS_RESULTHANDLER_HPP
+#endif  // SYLK_VULKAN_UTILS_RESULTHANDLER_HPP

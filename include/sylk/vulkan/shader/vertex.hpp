@@ -22,4 +22,4 @@ namespace sylk {
     };
 }
 
-#endif // SYLK_VULKAN_SHADER_VERTEX_HPP
+#endif  // SYLK_VULKAN_SHADER_VERTEX_HPP

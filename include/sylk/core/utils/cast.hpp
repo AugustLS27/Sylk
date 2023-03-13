@@ -5,6 +5,8 @@
 #ifndef SYLK_CORE_UTILS_CAST_HPP
 #define SYLK_CORE_UTILS_CAST_HPP
 
+#include <type_traits>
+
 namespace sylk {
     template<typename T>
     concept NotTriviallyCopyable = !std::is_trivially_copyable_v<T>;
@@ -20,4 +22,4 @@ namespace sylk {
     }
 }
 
-#endif // SYLK_CORE_UTILS_CAST_HPP
+#endif  // SYLK_CORE_UTILS_CAST_HPP

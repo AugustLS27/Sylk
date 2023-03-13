@@ -2,18 +2,18 @@
 // Created by August Silva on 10-3-23.
 //
 
+#include <sylk/core/utils/log.hpp>
 #include <sylk/vulkan/utils/queue_family_indices.hpp>
 #include <sylk/vulkan/utils/result_handler.hpp>
-#include <sylk/core/utils/log.hpp>
 
 auto sylk::QueueFamilyIndices::find(const vk::PhysicalDevice device, const vk::SurfaceKHR surface) -> sylk::QueueFamilyIndices {
     log(ELogLvl::TRACE, "Querying available device queue families...");
 
     QueueFamilyIndices indices;
-    const auto families = device.getQueueFamilyProperties();
+    const auto         families = device.getQueueFamilyProperties();
 
     for (i32 i = 0; i < families.size(); ++i) {
-        if(families[i].queueFlags & vk::QueueFlagBits::eGraphics) {
+        if (families[i].queueFlags & vk::QueueFlagBits::eGraphics) {
             indices.graphics = i;
         }
 

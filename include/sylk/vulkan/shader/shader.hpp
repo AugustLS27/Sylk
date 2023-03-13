@@ -12,22 +12,21 @@
 
 namespace sylk {
     class Shader {
-
-    public:
+      public:
         Shader(const vk::Device& device);
         void create(const char* filename);
         void destroy();
 
         auto get_module() const -> vk::ShaderModule;
 
-    private:
+      private:
         void create_shader_module();
 
-    private:
+      private:
         const vk::Device& device_;
         std::vector<char> shader_code_;
-        vk::ShaderModule shader_module_;
+        vk::ShaderModule  shader_module_;
     };
 }
 
-#endif // SYLK_VULKAN_SHADER_SHADER_HPP
+#endif  // SYLK_VULKAN_SHADER_SHADER_HPP

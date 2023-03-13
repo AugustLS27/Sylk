@@ -9,8 +9,8 @@
 #include <sylk/vulkan/utils/constants.hpp>
 
 #include <array>
-#include <vector>
 #include <string>
+#include <vector>
 
 namespace vk {
     class Instance;
@@ -18,7 +18,7 @@ namespace vk {
 
 namespace sylk {
     class ValidationLayers {
-    public:
+      public:
         static constexpr auto enabled() -> bool {
 #ifdef SYLK_DEBUG
             return true;
@@ -34,17 +34,15 @@ namespace sylk {
         SYLK_NODISCARD auto enabled_layer_count() -> u32;
         SYLK_NODISCARD auto enabled_layer_container() -> const std::vector<const char*>&;
 
-    private:
+      private:
         void fetch_available_validation_layers();
 
-    private:
-        const std::vector<const char*> required_layers_ {
-                VK_LAYER_KHRONOS_NAME
-        };
+      private:
+        const std::vector<const char*> required_layers_ {VK_LAYER_KHRONOS_NAME};
 
         std::vector<std::string> available_layers_;
-        vk::Instance& vk_instance_;
+        vk::Instance&            vk_instance_;
     };
 }
 
-#endif // SYLK_VULKAN_UTILS_VALIDATIONLAYERS_HPP
+#endif  // SYLK_VULKAN_UTILS_VALIDATIONLAYERS_HPP

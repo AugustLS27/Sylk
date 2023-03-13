@@ -5,8 +5,8 @@
 #ifndef SYLK_CORE_UTILS_LOG_HPP
 #define SYLK_CORE_UTILS_LOG_HPP
 
-#include "spdlog/spdlog.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
+#include "spdlog/spdlog.h"
 
 #include <memory>
 
@@ -18,20 +18,20 @@ namespace sylk {
         INFO,
         WARN,
         ERROR,
-        CRITICAL, // Terminates execution
+        CRITICAL,  // Terminates execution
         OFF
     };
 
 #ifndef SYLK_LOG_LEVEL
-#   if defined(SYLK_VERBOSE)
-#       define SYLK_LOG_LEVEL ELogLvl::TRACE
-#   elif defined(SYLK_DEBUG)
-#       define SYLK_LOG_LEVEL ELogLvl::DEBUG
-#   elif defined(SYLK_RELEASE)
-#       define SYLK_LOG_LEVEL ELogLvl::INFO
-#   else
-#       define SYLK_LOG_LEVEL ELogLvl::OFF
-#   endif
+#    if defined(SYLK_VERBOSE)
+#        define SYLK_LOG_LEVEL ELogLvl::TRACE
+#    elif defined(SYLK_DEBUG)
+#        define SYLK_LOG_LEVEL ELogLvl::DEBUG
+#    elif defined(SYLK_RELEASE)
+#        define SYLK_LOG_LEVEL ELogLvl::INFO
+#    else
+#        define SYLK_LOG_LEVEL ELogLvl::OFF
+#    endif
 #endif
 
     template<typename... Args>
@@ -40,11 +40,11 @@ namespace sylk {
     class Internal_Log_ {
         using SpdLogger = std::shared_ptr<spdlog::logger>;
 
-    public:
+      public:
         template<typename... Args>
         friend void log(ELogLvl log_level, const char* msg, Args&&... args);
 
-    private:
+      private:
         Internal_Log_() = default;
 
         static void init() {
@@ -58,7 +58,8 @@ namespace sylk {
                 logger->set_pattern("%^<%n>%$ %v");
             }
         }
-        inline static bool was_initialized {false};
+
+        inline static bool      was_initialized {false};
         inline static SpdLogger logger {spdlog::stdout_color_st("Sylk")};
     };
 
@@ -71,26 +72,26 @@ namespace sylk {
         const auto runtime_msg = fmt::runtime(msg);
 
         switch (log_level) {
-            case ELogLvl::TRACE:
-                Internal_Log_::logger->trace(runtime_msg, args...);
-                break;
-            case ELogLvl::DEBUG:
-                Internal_Log_::logger->debug(runtime_msg, args...);
-                break;
-            case ELogLvl::INFO:
-                Internal_Log_::logger->info(runtime_msg, args...);
-                break;
-            case ELogLvl::WARN:
-                Internal_Log_::logger->warn(runtime_msg, args...);
-                break;
-            case ELogLvl::ERROR:
-                Internal_Log_::logger->error(runtime_msg, args...);
-                break;
-            case ELogLvl::CRITICAL:
-                Internal_Log_::logger->critical(runtime_msg, args...);
-                std::abort();
-            default:
-                Internal_Log_::logger->error("Invalid log level specified.");
+        case ELogLvl::TRACE:
+            Internal_Log_::logger->trace(runtime_msg, args...);
+            break;
+        case ELogLvl::DEBUG:
+            Internal_Log_::logger->debug(runtime_msg, args...);
+            break;
+        case ELogLvl::INFO:
+            Internal_Log_::logger->info(runtime_msg, args...);
+            break;
+        case ELogLvl::WARN:
+            Internal_Log_::logger->warn(runtime_msg, args...);
+            break;
+        case ELogLvl::ERROR:
+            Internal_Log_::logger->error(runtime_msg, args...);
+            break;
+        case ELogLvl::CRITICAL:
+            Internal_Log_::logger->critical(runtime_msg, args...);
+            std::abort();
+        default:
+            Internal_Log_::logger->error("Invalid log level specified.");
         }
     }
 
@@ -98,6 +99,6 @@ namespace sylk {
     void log(const char* msg, Args&&... args) {
         log(ELogLvl::INFO, msg, args...);
     }
-}
+}  // namespace sylk
 
 #endif

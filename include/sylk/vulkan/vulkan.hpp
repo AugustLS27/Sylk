@@ -11,4 +11,4 @@
 #define VULKAN_HPP_ASSERT_ON_RESULT
 #include <vulkan/vulkan.hpp>
 
-#endif // SYLK_VULKAN_HPP
+#endif  // SYLK_VULKAN_HPP

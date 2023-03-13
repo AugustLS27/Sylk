@@ -9,4 +9,4 @@ namespace sylk {
     inline constexpr const char* VK_LAYER_KHRONOS_NAME = "VK_LAYER_KHRONOS_validation";
 }
 
-#endif // SYLK_VULKAN_UTILS_CONSTANTS_HPP
+#endif  // SYLK_VULKAN_UTILS_CONSTANTS_HPP

@@ -5,8 +5,8 @@
 #ifndef SYLK_CORE_UTILS_ALL_HPP
 #define SYLK_CORE_UTILS_ALL_HPP
 
+#include "cast.hpp"
 #include "log.hpp"
 #include "short_types.hpp"
-#include "cast.hpp"
 
-#endif // SYLK_CORE_UTILS_ALL_HPP
+#endif  // SYLK_CORE_UTILS_ALL_HPP

@@ -16,12 +16,10 @@ namespace sylk {
         std::optional<u32> graphics;
         std::optional<u32> presentation;
 
-        SYLK_NODISCARD auto has_required() const -> bool {
-            return graphics.has_value() && presentation.has_value();
-        }
+        SYLK_NODISCARD auto has_required() const -> bool { return graphics.has_value() && presentation.has_value(); }
 
         static auto find(vk::PhysicalDevice device, vk::SurfaceKHR surface) -> QueueFamilyIndices;
     };
 }
 
-#endif // SYLK_VULKAN_UTILS_QUEUEFAMILYINDICES_HPP
+#endif  // SYLK_VULKAN_UTILS_QUEUEFAMILYINDICES_HPP
