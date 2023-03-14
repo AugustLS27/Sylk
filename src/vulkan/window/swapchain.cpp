@@ -494,15 +494,29 @@ namespace sylk {
         namespace clock = std::chrono;
 
         static const auto start_time = clock::high_resolution_clock::now();
+        static f32        inc        = 0.0f;
+        static i32        seconds    = 0;
 
         const auto current_time = clock::high_resolution_clock::now();
-        f32        elapsed_time = clock::duration<f32, clock::seconds::period>(current_time - start_time).count();
+        const f32  elapsed_time = clock::duration<f32, clock::seconds::period>(current_time - start_time).count();
 
         auto ubo = UniformBufferObject {
-            .model      = glm::rotate(glm::mat4(1.0f), elapsed_time * glm::radians(360.f), glm::vec3(1.f, 0.0f, 1.0f)),
-            .view       = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
-            .projection = glm::perspective(glm::radians(45.0f), cast<f32>(extent_.width / extent_.height), 0.1f, 10.0f),
+            .model = glm::rotate(glm::mat4(1.0f), elapsed_time * glm::radians(inc), glm::vec3(0.0f, 0.0f, 1.0f)),
+            //            .view       = glm::lookAt(glm::vec3(2.0f, inc, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 1.0f,
+            //            0.0f)), .projection = glm::perspective(glm::radians(45.0f), cast<f32>(extent_.width / extent_.height),
+            //            0.1f, 10.0f),
         };
+
+        static f32 incval = 0.1f;
+        if (inc > 360.f || inc < -360.0f) {
+            incval *= -1.f;
+        }
+        inc += incval;
+        if (std::trunc(elapsed_time) > seconds) {
+            seconds = cast<i32>(elapsed_time);
+            log(ELogLvl::DEBUG, "inc: {}", inc);
+            log(ELogLvl::INFO, "elapsed: {}", elapsed_time);
+        }
 
         // invert y axis since glm was designed for OGL and VK isn't weird
         ubo.projection[1][1] *= -1;
