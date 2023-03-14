@@ -46,6 +46,10 @@ namespace sylk {
         void create_command_buffer();
         void create_framebuffers();
         void create_synchronizers();
+        void create_uniform_buffers();
+        void create_descriptor_pool();
+        void update_uniform_buffers();
+        void create_descriptor_sets();
 
         template<typename T>
         void create_staged_buffer(Buffer& buffer, vk::BufferUsageFlags buffer_type, const std::vector<T>& data);
@@ -73,8 +77,11 @@ namespace sylk {
         vk::Queue graphics_queue_;
         vk::Queue presentation_queue_;
 
-        std::vector<vk::CommandBuffer> command_buffers_;
+        vk::DescriptorPool descriptor_pool_;
+        std::vector<vk::DescriptorSet> descriptor_sets_;
+
         vk::CommandPool                command_pool_;
+        std::vector<vk::CommandBuffer> command_buffers_;
 
         std::vector<vk::Semaphore> semaphores_img_available_;
         std::vector<vk::Semaphore> semaphores_render_finished_;
@@ -94,6 +101,8 @@ namespace sylk {
 
         Buffer                 index_buffer_;
         const std::vector<u16> indices_ = {0, 1, 2, 2, 3, 0};
+
+        std::vector<Buffer> uniform_buffers_;
     };
 
 }  // namespace sylk

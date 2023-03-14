@@ -14,6 +14,7 @@ namespace sylk {
       public:
         struct CreateData {
             const void*                   data_to_map;
+            const bool                    persistent_mapping = false;
             const vk::Device              device;
             const vk::PhysicalDevice      physical_device;
             const vk::DeviceSize          buffer_size;
@@ -32,19 +33,21 @@ namespace sylk {
       public:
         void create(CreateData data);
         void destroy_with(vk::Device device);
+        void pass_data(void* data_to_pass, size_t size_in_bytes);
 
         void copy_onto(CopyData data) const;
 
-        SYLK_NODISCARD auto get_vkbuffer() const -> vk::Buffer;
-        SYLK_NODISCARD auto get_memory_handle() const -> vk::DeviceMemory;
+        SYLK_NODISCARD auto vk_buffer() const -> vk::Buffer;
+        SYLK_NODISCARD auto memory_handle() const -> vk::DeviceMemory;
+        SYLK_NODISCARD auto mapped_memory() const -> void*;
 
       private:
-        SYLK_NODISCARD auto find_memtype(vk::PhysicalDevice physical_device, u32 type_filter, vk::MemoryPropertyFlags properties)
-            -> u32;
+        SYLK_NODISCARD auto find_memtype(vk::PhysicalDevice physical_device, u32 type_filter, vk::MemoryPropertyFlags properties) -> u32;
 
       private:
         vk::Buffer       buffer_;
         vk::DeviceMemory buffer_memory_;
+        void*            mapped_memory_;
     };
 }
 

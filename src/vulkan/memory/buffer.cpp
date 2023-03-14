@@ -31,13 +31,20 @@ namespace sylk {
 
         handle_result(data.device.bindBufferMemory(buffer_, buffer_memory_, 0), "Failed to bind buffer memory");
 
-        // only map memory if there is data to map
-        if (data.data_to_map) {
-            const auto [mmap_result, mapped_data] = data.device.mapMemory(buffer_memory_, 0, data.buffer_size);
+        // since Buffer is a generic object, we need to be able to account for different types of buffers
+        // TransferDst buffers wouldn't really have any data to map, as they'll be copied onto later
+        // and uniform buffers require persistent mapping, so their data can be continually updated at lower overhead
+        // this block should address each of those requirements relatively concisely
+        if (data.data_to_map || data.persistent_mapping) {
+            const auto [mmap_result, mapped_memory] = data.device.mapMemory(buffer_memory_, 0, data.buffer_size);
             handle_result(mmap_result, "Failed to map buffer to device memory");
-            std::memcpy(mapped_data, data.data_to_map, cast<size_t>(data.buffer_size));
 
-            data.device.unmapMemory(buffer_memory_);
+            if (data.persistent_mapping) {
+                mapped_memory_ = mapped_memory;
+            } else {
+                std::memcpy(mapped_memory, data.data_to_map, cast<size_t>(data.buffer_size));
+                data.device.unmapMemory(buffer_memory_);
+            }
         }
     }
 
@@ -53,9 +60,13 @@ namespace sylk {
         throw std::runtime_error("Failed to find suitable vertex buffer memory type on this device");
     }
 
-    auto Buffer::get_vkbuffer() const -> vk::Buffer { return buffer_; }
+    auto Buffer::vk_buffer() const -> vk::Buffer {
+        return buffer_;
+    }
 
-    auto Buffer::get_memory_handle() const -> vk::DeviceMemory { return buffer_memory_; }
+    auto Buffer::memory_handle() const -> vk::DeviceMemory {
+        return buffer_memory_;
+    }
 
     void Buffer::copy_onto(Buffer::CopyData data) const {
         const auto cmd_buffer_alloc_info = vk::CommandBufferAllocateInfo {
@@ -93,6 +104,15 @@ namespace sylk {
     void Buffer::destroy_with(vk::Device device) {
         device.destroyBuffer(buffer_);
         device.freeMemory(buffer_memory_);
+        mapped_memory_ = nullptr;
+    }
+
+    auto Buffer::mapped_memory() const -> void* {
+        return mapped_memory_;
+    }
+
+    void Buffer::pass_data(void* data_to_pass, size_t size_in_bytes) {
+        std::memcpy(mapped_memory_, data_to_pass, size_in_bytes);
     }
 
 }  // namespace sylk

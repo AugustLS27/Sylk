@@ -15,15 +15,22 @@ namespace sylk {
         GraphicsPipeline(const vk::Device& device);
         void create(vk::Extent2D extent, vk::RenderPass renderpass);
         void destroy() const;
+        void destroy_descriptorset_layouts();
 
+        auto get_layout() const -> vk::PipelineLayout;
         auto get_handle() const -> vk::Pipeline;
+        auto get_descriptor_set_layout() const -> vk::DescriptorSetLayout;
 
       private:
-        const vk::Device&  device_;
-        vk::PipelineLayout layout_;
-        vk::Pipeline       pipeline_;
-        Shader             vertex_shader_;
-        Shader             fragment_shader_;
+        void create_descriptorset_layout();
+
+      private:
+        const vk::Device&       device_;
+        vk::DescriptorSetLayout descriptor_set_layout_;
+        vk::PipelineLayout      layout_;
+        vk::Pipeline            pipeline_;
+        Shader                  vertex_shader_;
+        Shader                  fragment_shader_;
     };
 
 }

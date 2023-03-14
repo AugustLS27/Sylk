@@ -59,6 +59,7 @@ add_executable(sylk
 
         src/vulkan/shader/shader.cpp
         src/vulkan/shader/vertex.cpp
+        src/vulkan/shader/uniformbuffer.cpp
 
         src/vulkan/memory/buffer.cpp
         )

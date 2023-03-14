@@ -3,6 +3,7 @@
 //
 
 #include <sylk/core/utils/all.hpp>
+#include <sylk/vulkan/shader/uniformbuffer.hpp>
 #include <sylk/vulkan/utils/queue_family_indices.hpp>
 #include <sylk/vulkan/utils/result_handler.hpp>
 #include <sylk/vulkan/vulkan.hpp>
@@ -10,7 +11,12 @@
 
 #include <GLFW/glfw3.h>
 
+#define GLM_FORCE_RADIANS
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 #include <algorithm>
+#include <chrono>
 #include <limits>
 
 constexpr sylk::u32 U32_LIMIT            = std::numeric_limits<sylk::u32>::max();
@@ -18,13 +24,15 @@ constexpr sylk::i32 MAX_FRAMES_IN_FLIGHT = 3;
 
 namespace sylk {
     Swapchain::Swapchain(const vk::Device& device)
-        : device_(device)
+        : current_frame_(0)
+        , device_(device)
         , graphics_pipeline_(device)
         , command_buffers_(MAX_FRAMES_IN_FLIGHT)
         , semaphores_img_available_(MAX_FRAMES_IN_FLIGHT)
         , semaphores_render_finished_(MAX_FRAMES_IN_FLIGHT)
         , fences_in_flight_(MAX_FRAMES_IN_FLIGHT)
-        , current_frame_(0) {}
+        , uniform_buffers_(MAX_FRAMES_IN_FLIGHT)
+        , descriptor_sets_(MAX_FRAMES_IN_FLIGHT) {}
 
     void Swapchain::create(const vk::PhysicalDevice physical_device, GLFWwindow* window, const vk::SurfaceKHR surface) {
         log(ELogLvl::TRACE, "Creating swapchain...");
@@ -41,6 +49,9 @@ namespace sylk {
         create_command_pool();
         create_staged_buffer(vertex_buffer_, vk::BufferUsageFlagBits::eVertexBuffer, vertices_);
         create_staged_buffer(index_buffer_, vk::BufferUsageFlagBits::eIndexBuffer, indices_);
+        create_uniform_buffers();
+        create_descriptor_pool();
+        create_descriptor_sets();
         create_command_buffer();
         create_synchronizers();
 
@@ -57,7 +68,16 @@ namespace sylk {
         index_buffer_.destroy_with(device_);
         log(ELogLvl::TRACE, "Destroyed index buffer");
 
+        for (auto& buffer : uniform_buffers_) {
+            buffer.destroy_with(device_);
+        }
+        log(ELogLvl::TRACE, "Destroyed uniform buffers");
+
+        device_.destroyDescriptorPool(descriptor_pool_);
+        log(ELogLvl::TRACE, "Destroyed descriptor pool");
+
         graphics_pipeline_.destroy();
+        graphics_pipeline_.destroy_descriptorset_layouts();
 
         device_.destroyRenderPass(renderpass_);
         log(ELogLvl::TRACE, "Destroyed renderpass");
@@ -93,8 +113,8 @@ namespace sylk {
         return details;
     }
 
-    auto Swapchain::select_surface_format(const std::vector<vk::SurfaceFormatKHR>& available_formats) const
-        -> vk::SurfaceFormatKHR {
+    auto
+    Swapchain::select_surface_format(const std::vector<vk::SurfaceFormatKHR>& available_formats) const -> vk::SurfaceFormatKHR {
         log(ELogLvl::TRACE, "Selecting swapchain surface format...");
 
         for (const auto& format : available_formats) {
@@ -130,10 +150,12 @@ namespace sylk {
 
         vk::Extent2D actual_extent {cast<u32>(window_width), cast<u32>(window_height)};
 
-        actual_extent.width =
-            std::clamp(actual_extent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
-        actual_extent.height =
-            std::clamp(actual_extent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+        actual_extent.width  = std::clamp(actual_extent.width,
+                                         capabilities.minImageExtent.width,
+                                         capabilities.maxImageExtent.width);
+        actual_extent.height = std::clamp(actual_extent.height,
+                                          capabilities.minImageExtent.height,
+                                          capabilities.maxImageExtent.height);
 
         return actual_extent;
     }
@@ -200,8 +222,8 @@ namespace sylk {
             const auto [sema_result_b, sema_b] = device_.createSemaphore(vk::SemaphoreCreateInfo());
             handle_result(sema_result_b, "Failed to create semaphore");
 
-            const auto [fence_result, fence] =
-                device_.createFence(vk::FenceCreateInfo {.flags = vk::FenceCreateFlagBits::eSignaled});
+            const auto [fence_result,
+                        fence] = device_.createFence(vk::FenceCreateInfo {.flags = vk::FenceCreateFlagBits::eSignaled});
             handle_result(fence_result, "Failed to create fence");
 
             semaphores_img_available_[i]   = sema_a;
@@ -215,8 +237,8 @@ namespace sylk {
     void Swapchain::draw_next() {
         handle_result(device_.waitForFences(fences_in_flight_[current_frame_], true, UINT64_MAX), "Vulkan fence error");
 
-        const auto [result, img_index] =
-            device_.acquireNextImageKHR(swapchain_, UINT64_MAX, semaphores_img_available_[current_frame_]);
+        const auto [result,
+                    img_index] = device_.acquireNextImageKHR(swapchain_, UINT64_MAX, semaphores_img_available_[current_frame_]);
         if (result == vk::Result::eErrorOutOfDateKHR) {
             recreate();
             return;
@@ -235,6 +257,8 @@ namespace sylk {
                                      .setWaitDstStageMask(wait_stage)
                                      .setSignalSemaphores(semaphores_render_finished_[current_frame_])
                                      .setCommandBuffers(command_buffers_[current_frame_]);
+
+        update_uniform_buffers();
 
         handle_result(graphics_queue_.submit(submit_info, fences_in_flight_[current_frame_]),
                       "Failed to submit to graphics queue");
@@ -271,8 +295,8 @@ namespace sylk {
         buffer.beginRenderPass(renderpass_begin_info, vk::SubpassContents::eInline);
         buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, graphics_pipeline_.get_handle());
 
-        buffer.bindVertexBuffers(0, vertex_buffer_.get_vkbuffer(), vk::DeviceSize {0});
-        buffer.bindIndexBuffer(index_buffer_.get_vkbuffer(), vk::DeviceSize {0}, vk::IndexType::eUint16);
+        buffer.bindVertexBuffers(0, vertex_buffer_.vk_buffer(), vk::DeviceSize {0});
+        buffer.bindIndexBuffer(index_buffer_.vk_buffer(), vk::DeviceSize {0}, vk::IndexType::eUint16);
 
         buffer.setViewport(0,
                            vk::Viewport {
@@ -282,6 +306,12 @@ namespace sylk {
                            });
 
         buffer.setScissor(0, vk::Rect2D {.extent = extent_});
+
+        buffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
+                                  graphics_pipeline_.get_layout(),
+                                  0,
+                                  descriptor_sets_[current_frame_],
+                                  nullptr);
 
         buffer.drawIndexed(cast<u32>(indices_.size()), 1, 0, 0, 0);
 
@@ -348,8 +378,10 @@ namespace sylk {
             .dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite,
         };
 
-        const auto render_pass_info =
-            vk::RenderPassCreateInfo().setAttachments(color_attachment).setSubpasses(subpass).setDependencies(subpass_dependency);
+        const auto render_pass_info = vk::RenderPassCreateInfo()
+                                          .setAttachments(color_attachment)
+                                          .setSubpasses(subpass)
+                                          .setDependencies(subpass_dependency);
 
         const auto [result, renderpass] = device_.createRenderPass(render_pass_info);
         handle_result(result, "Failed to create renderpass");
@@ -400,8 +432,8 @@ namespace sylk {
         const auto max_image_count = support_details.surface_capabilities.maxImageCount;
         const auto min_image_count = support_details.surface_capabilities.minImageCount + 1;
 
-        const auto swapchain_img_count =
-            (max_image_count > 0 && min_image_count > max_image_count ? max_image_count : min_image_count);
+        const auto swapchain_img_count = (max_image_count > 0 && min_image_count > max_image_count ? max_image_count
+                                                                                                   : min_image_count);
 
         const auto queue_indices     = QueueFamilyIndices::find(physical_device_, surface_);
         graphics_queue_family_index_ = queue_indices.graphics.value();
@@ -440,6 +472,90 @@ namespace sylk {
         images_ = images;
     }
 
+    void Swapchain::create_uniform_buffers() {
+        vk::DeviceSize buffer_size = sizeof(UniformBufferObject);
+
+        const auto buffer_data = Buffer::CreateData {
+            .data_to_map        = nullptr,
+            .persistent_mapping = true,
+            .device             = device_,
+            .physical_device    = physical_device_,
+            .buffer_size        = buffer_size,
+            .buffer_usage_flags = vk::BufferUsageFlagBits::eUniformBuffer,
+            .property_flags     = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+        };
+
+        for (auto& buffer : uniform_buffers_) {
+            buffer.create(buffer_data);
+        }
+    }
+
+    void Swapchain::update_uniform_buffers() {
+        namespace clock = std::chrono;
+
+        static const auto start_time = clock::high_resolution_clock::now();
+
+        const auto current_time = clock::high_resolution_clock::now();
+        f32        elapsed_time = clock::duration<f32, clock::seconds::period>(current_time - start_time).count();
+
+        auto ubo = UniformBufferObject {
+            .model      = glm::rotate(glm::mat4(1.0f), elapsed_time * glm::radians(360.f), glm::vec3(1.f, 0.0f, 1.0f)),
+            .view       = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
+            .projection = glm::perspective(glm::radians(45.0f), cast<f32>(extent_.width / extent_.height), 0.1f, 10.0f),
+        };
+
+        // invert y axis since glm was designed for OGL and VK isn't weird
+        ubo.projection[1][1] *= -1;
+
+        uniform_buffers_[current_frame_].pass_data(&ubo, sizeof(ubo));
+    }
+
+    void Swapchain::create_descriptor_pool() {
+        const auto num_buffers = cast<u32>(uniform_buffers_.size());
+        const auto pool_size   = vk::DescriptorPoolSize {
+              .descriptorCount = num_buffers,
+        };
+
+        const auto pool_info =
+            vk::DescriptorPoolCreateInfo {
+                .maxSets = num_buffers,
+            }
+                .setPoolSizes(pool_size);
+
+        const auto [result, pool] = device_.createDescriptorPool(pool_info);
+        handle_result(result, "Failed to create descriptor pool");
+        descriptor_pool_ = pool;
+    }
+
+    void Swapchain::create_descriptor_sets() {
+        std::vector<vk::DescriptorSetLayout> set_layouts(MAX_FRAMES_IN_FLIGHT, graphics_pipeline_.get_descriptor_set_layout());
+
+        const auto alloc_info = vk::DescriptorSetAllocateInfo {.descriptorPool = descriptor_pool_}.setSetLayouts(set_layouts);
+
+        const auto [result, sets] = device_.allocateDescriptorSets(alloc_info);
+        handle_result(result, "Failed to allocate descriptor sets");
+        descriptor_sets_ = sets;
+
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
+            const auto buffer_info = vk::DescriptorBufferInfo {
+                .buffer = uniform_buffers_[i].vk_buffer(),
+                .offset = 0,
+                .range  = sizeof(UniformBufferObject),
+            };
+
+            const auto write_descript_set = vk::WriteDescriptorSet {
+                .dstSet          = descriptor_sets_[i],
+                .dstBinding      = 0,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType  = vk::DescriptorType::eUniformBuffer,
+                .pBufferInfo     = &buffer_info,
+            };
+
+            device_.updateDescriptorSets(write_descript_set, nullptr);
+        }
+    }
+
     template<typename T>
     void Swapchain::create_staged_buffer(Buffer& buffer, vk::BufferUsageFlags buffer_type, const std::vector<T>& data) {
         const vk::DeviceSize buffer_size = sizeof(data[0]) * data.size();
@@ -468,7 +584,7 @@ namespace sylk {
         buffer.create(buffer_data);
 
         staging_buffer.copy_onto({
-            .target = buffer.get_vkbuffer(),
+            .target = buffer.vk_buffer(),
             .size   = buffer_size,
             .pool   = command_pool_,
             .device = device_,

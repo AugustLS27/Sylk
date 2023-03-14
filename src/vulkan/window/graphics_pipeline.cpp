@@ -11,8 +11,8 @@ constexpr const char* DEFAULT_SHADER_ENTRY_NAME = "main";
 
 namespace sylk {
     void GraphicsPipeline::create(const vk::Extent2D extent, const vk::RenderPass renderpass) {
-        vertex_shader_.create("../../shaders/vk/vert.spv");
-        fragment_shader_.create("../../shaders/vk/frag.spv");
+        vertex_shader_.create("../../shaders/vert.spv");
+        fragment_shader_.create("../../shaders/frag.spv");
 
         const auto vert_stage_info = vk::PipelineShaderStageCreateInfo {
             .stage  = vk::ShaderStageFlagBits::eVertex,
@@ -63,8 +63,8 @@ namespace sylk {
             .depthClampEnable        = false,
             .rasterizerDiscardEnable = false,
             .polygonMode             = vk::PolygonMode::eFill,
-            .cullMode                = vk::CullModeFlagBits::eBack,
-            .frontFace               = vk::FrontFace::eClockwise,
+            .cullMode                = vk::CullModeFlagBits::eNone,
+            .frontFace               = vk::FrontFace::eCounterClockwise,
             .depthBiasEnable         = false,
             .lineWidth               = 1.0f,
         };
@@ -92,7 +92,9 @@ namespace sylk {
             }
                 .setAttachments(color_blend_attachment);
 
-        const auto layout_info             = vk::PipelineLayoutCreateInfo();
+        create_descriptorset_layout();
+
+        const auto layout_info             = vk::PipelineLayoutCreateInfo().setSetLayouts(descriptor_set_layout_);
         const auto [layout_result, layout] = device_.createPipelineLayout(layout_info);
         handle_result(layout_result, "Failed to create pipeline layout", ELogLvl::ERROR);
         layout_ = layout;
@@ -135,5 +137,35 @@ namespace sylk {
         log(ELogLvl::TRACE, "Destroyed graphics pipeline layout");
     }
 
-    auto GraphicsPipeline::get_handle() const -> vk::Pipeline { return pipeline_; }
+    auto GraphicsPipeline::get_handle() const -> vk::Pipeline {
+        return pipeline_;
+    }
+
+    void GraphicsPipeline::create_descriptorset_layout() {
+        const auto ubo_layout_binding = vk::DescriptorSetLayoutBinding {
+            .binding         = 0,
+            .descriptorType  = vk::DescriptorType::eUniformBuffer,
+            .descriptorCount = 1,
+            .stageFlags      = vk::ShaderStageFlagBits::eVertex,
+        };
+
+        const auto layout_info = vk::DescriptorSetLayoutCreateInfo().setBindings(ubo_layout_binding);
+
+        const auto [result, layout] = device_.createDescriptorSetLayout(layout_info);
+        handle_result(result, "Failed to create uniform buffer descriptor set layout");
+        descriptor_set_layout_ = layout;
+    }
+
+    void GraphicsPipeline::destroy_descriptorset_layouts() {
+        device_.destroyDescriptorSetLayout(descriptor_set_layout_);
+        log(ELogLvl::TRACE, "Destroyed descriptor set layouts");
+    }
+
+    auto GraphicsPipeline::get_descriptor_set_layout() const -> vk::DescriptorSetLayout {
+        return descriptor_set_layout_;
+    }
+
+    auto GraphicsPipeline::get_layout() const -> vk::PipelineLayout {
+        return layout_;
+    }
 }  // namespace sylk

@@ -176,10 +176,9 @@ namespace sylk {
             return;
         }
 
-        std::sort(
-            eligible_devices.begin(),
-            eligible_devices.end(),
-            [=](std::pair<vk::PhysicalDevice, i16> a, std::pair<vk::PhysicalDevice, i16> b) { return a.second > b.second; });
+        std::sort(eligible_devices.begin(),
+                  eligible_devices.end(),
+                  [=](std::pair<vk::PhysicalDevice, i16> a, std::pair<vk::PhysicalDevice, i16> b) { return a.second > b.second; });
 
         for (const auto [dev, score] : eligible_devices) {
             if (device_is_suitable(dev)) {
@@ -207,7 +206,7 @@ namespace sylk {
 
         const f32                              queue_prio = 1.f;
         std::vector<vk::DeviceQueueCreateInfo> queue_create_infos;
-        const std::set<u32> unique_queue_families {queue_indices.graphics.value(), queue_indices.presentation.value()};
+        const std::set<u32>                    unique_queue_families {queue_indices.graphics.value(), queue_indices.presentation.value()};
         for (const auto family : unique_queue_families) {
             const auto dev_queue_create_info =
                 vk::DeviceQueueCreateInfo {
@@ -239,8 +238,7 @@ namespace sylk {
         handle_result(result, "Failed to create logical Vulkan device", ELogLvl::CRITICAL);
         device_ = dev;
 
-        swapchain_.set_queues(device_.getQueue(queue_indices.graphics.value(), 0),
-                              device_.getQueue(queue_indices.presentation.value(), 0));
+        swapchain_.set_queues(device_.getQueue(queue_indices.graphics.value(), 0), device_.getQueue(queue_indices.presentation.value(), 0));
 
         log(ELogLvl::DEBUG, "Created Vulkan logical device");
     }
